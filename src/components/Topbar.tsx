@@ -35,7 +35,7 @@ export default function Topbar({ isSidebarVisible, onToggleSidebar, isVisible = 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Pesquisar tarefas, membros ou projetos..."
-            className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/5 rounded-lg text-sm text-white focus:ring-1 focus:ring-white/20 transition-all placeholder:text-neutral-500"
+            className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-black focus:ring-1 focus:ring-black/20 transition-all placeholder:text-neutral-500 focus:bg-white/90"
           />
         </div>
       </div>
