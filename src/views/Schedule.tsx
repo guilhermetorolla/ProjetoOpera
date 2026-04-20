@@ -25,7 +25,8 @@ export default function Schedule() {
     setEnvironments, 
     bookings, 
     setBookings, 
-    currentUser 
+    currentUser,
+    logActivity
   } = useData();
   
   const [selectedEnvId, setSelectedEnvId] = useState<string>(environments[0]?.id || '');
@@ -62,6 +63,7 @@ export default function Schedule() {
       image: newEnv.image || 'https://images.unsplash.com/photo-1497160123023-589f63160e90?auto=format&fit=crop&q=80&w=1000'
     };
     setEnvironments([...environments, env]);
+    logActivity('registrou o ambiente', env.name, 'INFRAESTRUTURA');
     setIsRegistering(false);
     setNewEnv({ name: '', description: '', rules: [''], capacity: 0 });
   };
@@ -76,6 +78,7 @@ export default function Schedule() {
       endTime: `${newBooking.endTime}:00Z`
     };
     setBookings([...bookings, booking]);
+    logActivity('agendou o espaço', selectedEnv.name, 'INFRAESTRUTURA', [booking.title]);
     setIsBooking(false);
     setNewBooking({ title: '', startTime: '2024-04-16T10:00', endTime: '2024-04-16T11:00' });
   };

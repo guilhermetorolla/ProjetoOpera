@@ -6,6 +6,7 @@ export interface User {
   name: string;
   avatar: string;
   role: string;
+  email?: string;
 }
 
 export interface Comment {
@@ -29,6 +30,21 @@ export interface Task {
   comments?: Comment[];
 }
 
+export interface CFTVPoint {
+  id: string;
+  type: 'camera' | 'box' | 'sensor';
+  x: number;
+  y: number;
+  label: string;
+}
+
+export interface CFTVLink {
+  id: string;
+  fromId: string;
+  toId: string;
+  type: 'utp' | 'fiber' | 'power';
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -42,6 +58,11 @@ export interface Project {
     label: string;
     level: 'high' | 'medium' | 'low';
   }[];
+  cftvData?: {
+    points: CFTVPoint[];
+    links: CFTVLink[];
+  };
+  milestones?: Milestone[];
 }
 
 export interface Activity {
@@ -52,6 +73,17 @@ export interface Activity {
   time: string;
   type: string;
   tags?: string[];
+}
+
+export interface Milestone {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  isActive: boolean;
+  isCompleted: boolean;
+  createdAt?: string;
 }
 
 export interface Environment {

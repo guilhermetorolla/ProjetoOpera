@@ -8,10 +8,12 @@ import {
   Settings, 
   Plus, 
   HelpCircle, 
-  User as UserIcon 
+  User as UserIcon,
+  LogOut
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useData } from '../DataContext';
+import { supabase } from '../lib/supabase';
 
 interface SidebarProps {
   activeView: string;
@@ -25,6 +27,7 @@ export default function Sidebar({ activeView, onViewChange, isVisible, onToggle 
   const navItems = [
     { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
     { id: 'projects', label: 'Projetos', icon: GitBranch },
+    { id: 'resource_map', label: 'Mapa de Recursos', icon: UserIcon },
     { id: 'schedule', label: 'Agendamento', icon: Calendar },
     { id: 'analytics', label: 'Análises', icon: BarChart3 },
     { id: 'documents', label: 'Documentos', icon: FileText },
@@ -39,7 +42,7 @@ export default function Sidebar({ activeView, onViewChange, isVisible, onToggle 
       <div className="mb-8 px-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tighter text-black">Opero</h1>
-          <p className="text-[10px] uppercase tracking-widest text-neutral-400 font-bold mt-1">Workspace</p>
+          <p className="text-[10px] uppercase tracking-widest text-black/40 font-bold mt-1">Workspace</p>
         </div>
       </div>
 
@@ -52,7 +55,7 @@ export default function Sidebar({ activeView, onViewChange, isVisible, onToggle 
               "w-full flex items-center gap-3 px-4 py-2 rounded-md font-medium text-sm transition-all duration-200",
               activeView === item.id 
                 ? "bg-white text-black shadow-sm border-l-4 border-black" 
-                : "text-neutral-400 hover:text-white hover:bg-white/5"
+                : "text-black/60 hover:text-black hover:bg-black/5"
             )}
           >
             <item.icon size={18} />
@@ -76,12 +79,12 @@ export default function Sidebar({ activeView, onViewChange, isVisible, onToggle 
       <div className="mt-auto space-y-1">
         <button 
           onClick={() => alert('Suporte Opero: Encaminhando para central de ajuda...')}
-          className="w-full flex items-center gap-3 px-4 py-2 text-neutral-400 hover:text-white text-sm font-medium transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2 text-black/60 hover:text-black text-sm font-medium transition-colors"
         >
           <HelpCircle size={18} /> Suporte
         </button>
         
-        <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl mt-4 border border-white/5">
+        <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl mt-4 border border-white/5 group relative">
           <img 
             src={currentUser.avatar} 
             alt={currentUser.name} 
@@ -89,8 +92,15 @@ export default function Sidebar({ activeView, onViewChange, isVisible, onToggle 
           />
           <div className="flex-1 min-w-0 text-left">
             <p className="text-xs font-bold truncate text-black">{currentUser.name}</p>
-            <p className="text-[10px] text-neutral-400 truncate">{currentUser.role}</p>
+            <p className="text-[10px] text-black/40 truncate">{currentUser.role}</p>
           </div>
+          <button 
+            onClick={() => supabase.auth.signOut()}
+            className="p-1.5 hover:bg-black/10 rounded-md transition-all text-black/40 hover:text-red-600"
+            title="Sair"
+          >
+            <LogOut size={14} />
+          </button>
         </div>
       </div>
     </aside>

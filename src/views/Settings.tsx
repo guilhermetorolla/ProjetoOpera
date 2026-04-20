@@ -5,7 +5,12 @@ import { cn } from '../lib/utils';
 import { useData } from '../DataContext';
 
 export default function Settings() {
-  const { currentUser } = useData();
+  const { currentUser, setCurrentUser, logActivity } = useData();
+
+  const handleUpdateProfile = (field: 'name' | 'role', value: string) => {
+    setCurrentUser(prev => ({ ...prev, [field]: value }));
+    logActivity('atualizou seu perfil', field === 'name' ? 'nome' : 'cargo', 'SISTEMA');
+  };
 
   return (
     <motion.div 
@@ -32,11 +37,21 @@ export default function Settings() {
           <div className="grid grid-cols-2 gap-6 pt-6 border-t border-neutral-50">
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Nome de Exibição</label>
-              <input type="text" defaultValue={currentUser.name} className="w-full bg-neutral-50 border border-neutral-100 rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-black outline-none transition-all" />
+              <input 
+                type="text" 
+                defaultValue={currentUser.name} 
+                onBlur={(e) => handleUpdateProfile('name', e.target.value)}
+                className="w-full bg-neutral-50 border border-neutral-100 rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-black outline-none transition-all" 
+              />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Cargo / Função</label>
-              <input type="text" defaultValue={currentUser.role} className="w-full bg-neutral-50 border border-neutral-100 rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-black outline-none transition-all" />
+              <input 
+                type="text" 
+                defaultValue={currentUser.role} 
+                onBlur={(e) => handleUpdateProfile('role', e.target.value)}
+                className="w-full bg-neutral-50 border border-neutral-100 rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-black outline-none transition-all" 
+              />
             </div>
           </div>
         </section>

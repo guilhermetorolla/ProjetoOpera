@@ -19,10 +19,12 @@ import Editor from './views/Editor';
 import Schedule from './views/Schedule';
 import Login from './views/Login';
 import Settings from './views/Settings';
+import ResourceMap from './views/ResourceMap';
 import AnoAI from './components/ui/animated-shader-background';
 import { cn } from './lib/utils';
+import { supabase } from './lib/supabase';
 
-import { DataProvider } from './DataContext';
+import { useData, DataProvider } from './DataContext';
 
 export default function App() {
   return (
@@ -33,8 +35,7 @@ export default function App() {
 }
 
 function AppContent() {
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { session, isAuthReady } = useData();
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [userSidebarPreference, setUserSidebarPreference] = useState(true);
@@ -54,18 +55,14 @@ function AppContent() {
     setLastScrollY(currentScrollY);
   };
 
-  // Simulate initial auth check
-  useEffect(() => {
-    const timer = setTimeout(() => setIsAuthReady(true), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
         return <Dashboard key="dashboard" onViewChange={setActiveView} />;
+      case 'resource_map':
+        return <ResourceMap key="resource_map" />;
       case 'projects':
-        return <Projects key="projects" />;
+        return <Projects key="projects" onViewChange={setActiveView} />;
       case 'analytics':
         return <ProjectDetail key="analytics" />;
       case 'documents':
@@ -96,11 +93,11 @@ function AppContent() {
   }
 
   return (
-    <div className="flex min-h-screen bg-transparent">
+    <div className="relative w-full min-h-screen">
       <AnoAI />
       
-      {!isLoggedIn ? (
-        <Login onLogin={() => setIsLoggedIn(true)} />
+      {!session ? (
+        <Login />
       ) : (
         <div className="flex w-full min-h-screen bg-transparent">
           <Sidebar 
@@ -126,6 +123,8 @@ function AppContent() {
                 setIsSidebarVisible(next);
               }} 
               isVisible={showTopbar}
+              onViewChange={setActiveView}
+              activeView={activeView}
             />
             
             <main 
@@ -150,9 +149,9 @@ function AppContent() {
           {/* Floating Global Context Button */}
           {activeView !== 'documents' && (
             <button className={cn(
-              "fixed bottom-8 right-8 h-14 w-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group z-50",
-              !showTopbar && "translate-y-24 opacity-0"
-            )}>
+                "fixed bottom-8 right-8 h-14 w-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group z-50",
+                !showTopbar && "translate-y-24 opacity-0"
+              )}>
               <motion.div
                 animate={{ rotate: [0, 90, 0] }}
                 transition={{ repeat: Infinity, duration: 4, ease: 'linear' }}

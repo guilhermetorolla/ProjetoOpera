@@ -8,9 +8,17 @@ interface TopbarProps {
   isSidebarVisible: boolean;
   onToggleSidebar: () => void;
   isVisible?: boolean;
+  onViewChange: (v: string) => void;
+  activeView: string;
 }
 
-export default function Topbar({ isSidebarVisible, onToggleSidebar, isVisible = true }: TopbarProps) {
+export default function Topbar({ 
+  isSidebarVisible, 
+  onToggleSidebar, 
+  isVisible = true, 
+  onViewChange, 
+  activeView 
+}: TopbarProps) {
   const { activities, logActivity } = useData();
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,13 +31,13 @@ export default function Topbar({ isSidebarVisible, onToggleSidebar, isVisible = 
       <div className="flex items-center gap-4 flex-1 max-w-xl">
         <button 
           onClick={onToggleSidebar}
-          className="p-2 text-neutral-400 hover:text-white transition-colors lg:mr-2"
+          className="p-2 text-black/60 hover:text-black transition-colors lg:mr-2"
         >
           {isSidebarVisible ? <X size={20} /> : <Menu size={20} />}
         </button>
 
         <div className="relative w-full group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-white transition-colors" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-black transition-colors" size={16} />
           <input 
             type="text" 
             value={searchQuery}
@@ -46,7 +54,7 @@ export default function Topbar({ isSidebarVisible, onToggleSidebar, isVisible = 
             onClick={() => setShowNotifications(!showNotifications)}
             className={cn(
               "p-2 transition-colors relative",
-              showNotifications ? "text-white" : "text-neutral-400 hover:text-white"
+              showNotifications ? "text-black" : "text-black/60 hover:text-black"
             )}
           >
             <Bell size={18} />
@@ -101,12 +109,17 @@ export default function Topbar({ isSidebarVisible, onToggleSidebar, isVisible = 
           </AnimatePresence>
         </div>
 
-        <button className="p-2 text-neutral-400 hover:text-white transition-colors">
+        <button className="p-2 text-black/60 hover:text-black transition-colors">
           <Grid size={18} />
         </button>
         <button 
           onClick={() => {
-            logActivity('acionou', 'Ação Rápida', 'SISTEMA');
+            if (activeView !== 'projects') {
+              onViewChange('projects');
+              logActivity('acionou atalho de', 'Projeto', 'SISTEMA');
+            } else {
+              logActivity('acionou', 'Ação Rápida', 'SISTEMA');
+            }
           }}
           className="bg-white text-black px-4 py-1.5 rounded-md text-sm font-bold hover:bg-neutral-200 transition-colors"
         >

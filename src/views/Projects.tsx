@@ -17,11 +17,15 @@ import {
   Calendar,
   Camera,
   Send,
-  Trash2
+  Trash2,
+  Map as MapIcon,
+  LayoutGrid
 } from 'lucide-react';
 import { useData } from '../DataContext';
 import { cn } from '../lib/utils';
+import { dataService } from '../services/dataService';
 import { Status, Project, Task, Priority, User, Comment } from '../types';
+import CFTVMapping from '../components/CFTVMapping';
 
 const columns: { id: Status; label: string; color: string }[] = [
   { id: 'Pendente', label: 'A Fazer', color: '#5d5e66' },
@@ -97,7 +101,7 @@ const TaskCard = React.memo(({ task, onDragStart, onClick, openEditTask, handleD
   );
 });
 
-export default function Projects() {
+export default function Projects({ onViewChange }: { onViewChange?: (v: string) => void }) {
   const { 
     projects: localProjects, 
     setProjects: setLocalProjects, 
@@ -105,16 +109,29 @@ export default function Projects() {
     setTasks: setLocalTasks,
     users,
     currentUser,
-    logActivity
+    logActivity,
+    refreshData,
+    selectedProject: activeSelectedProject,
+    setSelectedProject
   } = useData();
   
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+  // Helper to open project details
+  const navigateToDetails = (p: Project, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedProject(p);
+    onViewChange?.('analytics');
+  };
   
   // Modals visibility
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [viewMode, setViewMode] = useState<'board' | 'map'>('board');
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // New/Edit Task Form State
   const [taskForm, setTaskForm] = useState({
@@ -124,7 +141,8 @@ export default function Projects() {
     priority: 'Média' as Priority,
     assignees: [] as string[],
     dueDate: new Date().toISOString().split('T')[0],
-    status: 'Pendente' as Status
+    status: 'Pendente' as Status,
+    images: [] as string[]
   });
 
   // New/Edit Project Form State
@@ -151,46 +169,73 @@ export default function Projects() {
   );
 
   // PROJECT ACTIONS
-  const handleSaveProject = () => {
-    if (projectForm.id) {
-      // Update
-      const updated = localProjects.map(p => p.id === projectForm.id ? {
-        ...p,
-        name: projectForm.name,
-        description: projectForm.description,
-        type: projectForm.type,
-        status: projectForm.status,
-        members: users.filter(u => projectForm.members.includes(u.id))
-      } : p);
-      setLocalProjects(updated);
-      logActivity('atualizou o projeto', projectForm.name, 'GESTÃO');
-    } else {
-      // Create
-      const newP: Project = {
-        id: `p-${Date.now()}`,
-        name: projectForm.name || 'Novo Projeto',
-        description: projectForm.description,
-        type: projectForm.type,
-        status: projectForm.status,
-        progress: 0,
-        burnRate: '$0',
-        members: users.filter(u => projectForm.members.includes(u.id)),
-        riskProfile: [{ label: 'Novo', level: 'low' }]
-      };
-      setLocalProjects([...localProjects, newP]);
-      logActivity('criou o projeto', newP.name, 'GESTÃO');
+  const handleSaveProject = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    setSaveError(null);
+    console.log('--- Lançamento: Iniciado ---');
+    console.log('Projects: Formulário atual:', projectForm);
+    
+    if (!projectForm?.name?.trim()) {
+      console.warn('Projects: Validação falhou - nome ausente.');
+      setSaveError('O nome da iniciativa é obrigatório.');
+      return;
     }
-    setIsProjectModalOpen(false);
-    setProjectToEdit(null);
-    setProjectForm({ id: '', name: '', description: '', type: 'GERAL', status: 'Em Andamento', members: [] });
+
+    setIsSaving(true);
+    try {
+      if (projectForm.id) {
+        console.log('Projects: Chamando updateProject...');
+        await dataService.updateProject(projectForm.id, {
+          name: projectForm.name,
+          description: projectForm.description,
+          type: projectForm.type,
+          status: projectForm.status,
+          riskProfile: [{ label: 'Atualizado', level: 'medium' }],
+        });
+        logActivity('atualizou o projeto', projectForm.name, 'GESTÃO');
+      } else {
+        console.log('Projects: Chamando createProject no service...');
+        const newP = await dataService.createProject({
+          name: projectForm.name,
+          description: projectForm.description,
+          type: projectForm.type,
+          status: projectForm.status,
+          riskProfile: [{ label: 'Novo', level: 'low' }],
+          progress: 0,
+          burnRate: 'Estável',
+          cftvData: projectForm.type === 'CFTV' ? { points: [], links: [] } : undefined
+        });
+        console.log('Projects: Retorno do service com sucesso:', newP);
+        logActivity('criou o projeto', newP?.name || projectForm.name, 'GESTÃO');
+      }
+      
+      console.log('Projects: Sucesso! Fechando modal e resetando estado.');
+      setIsProjectModalOpen(false);
+      setProjectToEdit(null);
+      setProjectForm({ id: '', name: '', description: '', type: 'GERAL', status: 'Em Andamento', members: [] });
+      
+      await refreshData();
+      console.log('--- Lançamento: Concluído com Sucesso ---');
+    } catch (error: any) {
+      console.error('Projects: Falha no processo de salvamento:', error);
+      const errorMsg = error.message || 'Erro inesperado no servidor.';
+      setSaveError(`Falha Crítica: ${errorMsg}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteProject = (id: string, e?: React.MouseEvent) => {
+  const handleDeleteProject = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (confirm('Deseja realmente excluir este projeto e todas as suas tarefas?')) {
-      setLocalProjects(localProjects.filter(p => p.id !== id));
-      setLocalTasks(localTasks.filter(t => t.projectId !== id));
-      if (selectedProjectId === id) setSelectedProjectId(null);
+    if (confirm('Deseja realmente excluir este projeto permanentemente?')) {
+      try {
+        await dataService.deleteProject(id);
+        await refreshData();
+        if (selectedProjectId === id) setSelectedProjectId(null);
+        logActivity('excluiu um projeto', 'deletado', 'GESTÃO');
+      } catch (error) {
+        console.error('Erro ao deletar projeto:', error);
+      }
     }
   };
 
@@ -209,43 +254,44 @@ export default function Projects() {
   };
 
   // TASK ACTIONS
-  const handleSaveTask = () => {
+  const handleSaveTask = async () => {
     if (!selectedProjectId || !selectedProject) return;
 
-    if (taskForm.id) {
-      // Update
-      const updated = localTasks.map(t => t.id === taskForm.id ? {
-        ...t,
-        title: taskForm.title,
-        description: taskForm.description,
-        priority: taskForm.priority,
-        assignees: users.filter(u => taskForm.assignees.includes(u.id)),
-        dueDate: taskForm.dueDate,
-        status: taskForm.status
-      } : t);
-      setLocalTasks(updated);
-      logActivity('atualizou a tarefa', taskForm.title, 'OPERACIONAL');
-    } else {
-      // Create
-      const task: Task = {
-        id: `t-${Date.now()}`,
-        title: taskForm.title || 'Nova Tarefa',
-        description: taskForm.description,
-        project: selectedProject.name,
-        projectId: selectedProjectId,
-        status: taskForm.status,
-        priority: taskForm.priority,
-        assignees: users.filter(u => taskForm.assignees.includes(u.id)),
-        dueDate: taskForm.dueDate,
-        comments: [],
-        images: []
-      };
-      setLocalTasks([...localTasks, task]);
-      logActivity('adicionou a tarefa', task.title, 'OPERACIONAL', [task.priority]);
+    try {
+      if (taskForm.id) {
+        // Update Remote
+        await dataService.updateTask(taskForm.id, {
+          title: taskForm.title,
+          description: taskForm.description,
+          priority: taskForm.priority,
+          status: taskForm.status,
+          dueDate: taskForm.dueDate,
+          assignees: users.filter(u => taskForm.assignees.includes(u.id)),
+          images: taskForm.images
+        });
+        logActivity('atualizou a tarefa', taskForm.title, 'OPERACIONAL');
+      } else {
+        // Create Remote
+        await dataService.createTask({
+          projectId: selectedProjectId,
+          title: taskForm.title || 'Nova Tarefa',
+          description: taskForm.description,
+          status: taskForm.status,
+          priority: taskForm.priority,
+          dueDate: taskForm.dueDate,
+          assignees: users.filter(u => taskForm.assignees.includes(u.id)),
+          images: taskForm.images
+        });
+        logActivity('adicionou a tarefa', taskForm.title || 'Nova Tarefa', 'OPERACIONAL', [taskForm.priority]);
+      }
+      
+      await refreshData();
+      setIsTaskModalOpen(false);
+      setTaskForm({ id: '', title: '', description: '', priority: 'Média', assignees: [], dueDate: new Date().toISOString().split('T')[0], status: 'Pendente', images: [] });
+    } catch (error) {
+      console.error('Erro ao salvar tarefa:', error);
+      alert('Erro ao salvar tarefa no banco de dados.');
     }
-    
-    setIsTaskModalOpen(false);
-    setTaskForm({ id: '', title: '', description: '', priority: 'Média', assignees: [], dueDate: new Date().toISOString().split('T')[0], status: 'Pendente' });
   };
 
   const openEditTask = useCallback((t: Task) => {
@@ -256,16 +302,22 @@ export default function Projects() {
       priority: t.priority,
       assignees: t.assignees.map(u => u.id),
       dueDate: t.dueDate,
-      status: t.status
+      status: t.status,
+      images: t.images || []
     });
     setIsTaskModalOpen(true);
   }, []);
 
-  const handleDeleteTask = useCallback((taskId: string, e?: React.MouseEvent) => {
+  const handleDeleteTask = useCallback(async (taskId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (confirm('Excluir esta tarefa?')) {
-      setLocalTasks(prev => prev.filter(t => t.id !== taskId));
-      if (selectedTask?.id === taskId) setSelectedTask(null);
+    if (confirm('Excluir esta tarefa permanentemente?')) {
+      try {
+        await dataService.deleteTask(taskId);
+        await refreshData();
+        if (selectedTask?.id === taskId) setSelectedTask(null);
+      } catch (error) {
+        console.error('Erro ao deletar tarefa:', error);
+      }
     }
   }, [selectedTask]);
 
@@ -317,9 +369,23 @@ export default function Projects() {
     });
   };
 
-  const handleUpdateTaskStatus = (taskId: string, newStatus: Status) => {
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: Status) => {
+    // Optimistic UI update
     const updatedTasks = localTasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t);
     setLocalTasks(updatedTasks);
+
+    try {
+      const taskToUpdate = localTasks.find(t => t.id === taskId);
+      if (taskToUpdate) {
+        await dataService.updateTask(taskId, { status: newStatus });
+        logActivity('moveu a tarefa', taskToUpdate.title, 'OPERACIONAL');
+        await refreshData();
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status da tarefa:', error);
+      // Revert if error? (Optional, usually better for total sync)
+      await refreshData();
+    }
   };
 
   // Drag and Drop handlers
@@ -341,199 +407,242 @@ export default function Projects() {
     handleUpdateTaskStatus(taskId, status);
   };
 
-  if (!selectedProjectId) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="flex flex-col h-full bg-transparent p-12 overflow-y-auto scrollbar-hide"
-      >
-        <header className="mb-12">
-          <nav className="flex items-center gap-2 text-[10px] font-bold text-[#5d5e66] tracking-widest uppercase mb-2">
-            <span>Opero</span>
-            <span className="opacity-30">/</span>
-            <span className="text-black">Portfólio de Projetos</span>
-          </nav>
-          <div className="flex justify-between items-end">
-            <h2 className="text-5xl font-extrabold tracking-tighter text-black">Hub de Iniciativas</h2>
-            <button 
-              onClick={() => {
-                setProjectToEdit(null);
-                setProjectForm({ id: '', name: '', description: '', type: 'GERAL', status: 'Em Andamento', members: [] });
-                setIsProjectModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-black text-white text-xs font-bold transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Plus size={16} /> Novo Projeto
-            </button>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {localProjects.map(project => (
-            <motion.div
-              key={project.id}
-              whileHover={{ y: -5 }}
-              onClick={() => setSelectedProjectId(project.id)}
-              className="bg-white/40 backdrop-blur-xl p-8 rounded-[32px] border border-neutral-100 shadow-sm cursor-pointer hover:shadow-2xl transition-all group relative"
-            >
-              <div className="flex justify-between items-start mb-8">
-                <span className="text-[10px] font-bold text-[#5d5e66] bg-neutral-100 px-3 py-1 rounded-full uppercase tracking-widest">{project.type}</span>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={(e) => openEditProject(project, e)}
-                    className="p-2 hover:bg-neutral-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
-                  <button 
-                    onClick={(e) => handleDeleteProject(project.id, e)}
-                    className="p-2 hover:bg-red-50 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    project.status === 'Bloqueado' ? "bg-red-500 animate-pulse" : "bg-emerald-400"
-                  )} />
-                </div>
-              </div>
-              
-              <h3 className="text-2xl font-extrabold tracking-tight mb-2 group-hover:text-black transition-colors">{project.name}</h3>
-              <p className="text-xs text-[#5d5e66] leading-relaxed mb-8 line-clamp-2">{project.description}</p>
-              
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold text-[#5d5e66] uppercase">
-                    <span>Progresso</span>
-                    <span>{project.progress}%</span>
-                  </div>
-                  <div className="h-1 w-full bg-neutral-50 rounded-full overflow-hidden">
-                    <div className="h-full bg-black transition-all duration-1000" style={{ width: `${project.progress}%` }} />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-neutral-50">
-                  <div className="flex -space-x-2">
-                    {users.slice(0, 3).map(u => (
-                      <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-white object-cover" alt="" />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-black font-bold text-xs uppercase tracking-tighter">
-                    Gerenciar Tasks <ChevronRight size={14} />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="flex flex-col h-full bg-transparent overflow-hidden"
     >
-      {/* Kanban Header */}
-      <div className="px-8 py-6 flex items-end justify-between shrink-0 glass-panel border-none rounded-none m-0">
-        <div className="flex items-center gap-6">
-          <button 
-            onClick={() => setSelectedProjectId(null)}
-            className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <nav className="flex items-center gap-2 text-[10px] font-bold text-[#5d5e66] tracking-widest uppercase mb-1">
-              <span>Portfólio</span>
+      {!selectedProjectId ? (
+        <div className="flex-1 flex flex-col p-12 overflow-y-auto scrollbar-hide">
+          <header className="mb-12">
+            <nav className="flex items-center gap-2 text-[10px] font-bold text-[#5d5e66] tracking-widest uppercase mb-2">
+              <span>Opero</span>
               <span className="opacity-30">/</span>
-              <span className="text-black font-black">{selectedProject?.name}</span>
+              <span className="text-black">Portfólio de Projetos</span>
             </nav>
-            <h2 className="text-3xl font-extrabold tracking-tighter text-black uppercase">Quadro de Operação</h2>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <div className="flex -space-x-2 mr-4">
-            {selectedProject?.members?.map(m => (
-              <img key={m.id} src={m.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] object-cover" alt="" title={m.name} />
-            ))}
-            {!selectedProject?.members && users.slice(0, 3).map(u => (
-              <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] object-cover" alt="" title={u.name} />
-            ))}
-            <div className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] bg-neutral-100 flex items-center justify-center text-[10px] font-bold">+5</div>
-          </div>
-          <button 
-            onClick={() => openEditProject(selectedProject!)}
-            className="p-2 hover:bg-neutral-100 rounded-full transition-colors mr-2"
-            title="Editar Projeto"
-          >
-            <MoreHorizontal size={20} />
-          </button>
-          <button 
-            onClick={() => handleDeleteProject(selectedProjectId!)}
-            className="p-2 hover:bg-red-50 text-red-500 rounded-full transition-colors mr-4"
-            title="Excluir Projeto"
-          >
-            <Trash2 size={20} />
-          </button>
-          <button 
-            onClick={() => {
-              setTaskForm({ id: '', title: '', description: '', priority: 'Média', assignees: [], dueDate: new Date().toISOString().split('T')[0], status: 'Pendente' });
-              setIsTaskModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-black text-white text-xs font-bold transition-all shadow-md active:scale-95"
-          >
-            <Plus size={14} /> Nova Task
-          </button>
-        </div>
-      </div>
+            <div className="flex justify-between items-end">
+              <h2 className="text-5xl font-extrabold tracking-tighter text-black">Hub de Iniciativas</h2>
+              <button 
+                onClick={() => {
+                  setProjectToEdit(null);
+                  setProjectForm({ id: '', name: '', description: '', type: 'GERAL', status: 'Em Andamento', members: [] });
+                  setIsProjectModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-black text-white text-xs font-bold transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Plus size={16} /> Novo Projeto
+              </button>
+            </div>
+          </header>
 
-      {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto p-8 pt-0 scrollbar-hide bg-transparent">
-        <div className="flex gap-6 h-full min-w-max">
-          {columns.map(col => (
-            <div 
-              key={col.id} 
-              className="w-80 flex flex-col h-full bg-white/5 backdrop-blur-sm rounded-3xl p-4 overflow-hidden"
-              onDragOver={onDragOver}
-              onDrop={(e) => onDrop(e, col.id)}
-            >
-              <div className="flex items-center justify-between mb-4 px-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
-                  <h3 className="text-[10px] font-extrabold text-black uppercase tracking-widest">{col.label}</h3>
-                  <span className="bg-neutral-100 px-2 py-0.5 rounded-full text-[10px] font-bold text-[#5d5e66]">
-                    {projectTasks.filter(t => t.status === col.id).length}
-                  </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {localProjects.map(project => (
+              <motion.div
+                key={project.id}
+                whileHover={{ y: -5 }}
+                onClick={() => setSelectedProjectId(project.id)}
+                className="bg-white/40 backdrop-blur-xl p-8 rounded-[32px] border border-neutral-100 shadow-sm cursor-pointer hover:shadow-2xl transition-all group relative"
+              >
+                <div className="flex justify-between items-start mb-8">
+                  <span className="text-[10px] font-bold text-[#5d5e66] bg-neutral-100 px-3 py-1 rounded-full uppercase tracking-widest">{project.type}</span>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(e) => openEditProject(project, e)}
+                      className="p-2 hover:bg-neutral-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteProject(project.id, e)}
+                      className="p-2 hover:bg-red-50 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      project.status === 'Bloqueado' ? "bg-red-500 animate-pulse" : "bg-emerald-400"
+                    )} />
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide pb-10">
-                {projectTasks.filter(t => t.status === col.id).map(task => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onDragStart={onDragStart}
-                    onClick={() => setSelectedTask(task)}
-                    openEditTask={openEditTask}
-                    handleDeleteTask={handleDeleteTask}
-                  />
-                ))}
                 
-                {projectTasks.filter(t => t.status === col.id).length === 0 && (
-                  <div className="h-20 border-2 border-dashed border-neutral-100 rounded-xl flex items-center justify-center opacity-30">
-                    <p className="text-[8px] font-bold uppercase tracking-widest">Sem tasks</p>
+                <h3 className="text-2xl font-extrabold tracking-tight mb-2 group-hover:text-black transition-colors">{project.name}</h3>
+                <p className="text-xs text-[#5d5e66] leading-relaxed mb-8 line-clamp-2">{project.description}</p>
+                
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-bold text-[#5d5e66] uppercase">
+                      <span>Progresso</span>
+                      <span>{project.progress}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-neutral-50 rounded-full overflow-hidden">
+                      <div className="h-full bg-black transition-all duration-1000" style={{ width: `${project.progress}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-neutral-50">
+                    <div className="flex -space-x-2">
+                      {users.slice(0, 3).map(u => (
+                        <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-white object-cover" alt="" />
+                      ))}
+                    </div>
+                    <div 
+                      onClick={(e) => navigateToDetails(project, e)}
+                      className="flex items-center gap-1.5 text-black font-bold text-xs uppercase tracking-tighter hover:opacity-70 transition-opacity"
+                    >
+                      Detalhamento <TrendingUp size={14} />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Kanban Header */}
+          <div className="px-8 py-6 flex items-end justify-between shrink-0 glass-panel border-none rounded-none m-0 shadow-sm z-30">
+            <div className="flex items-center gap-6">
+              <button 
+                onClick={() => {
+                  setSelectedProjectId(null);
+                  setViewMode('board');
+                }}
+                className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div className="flex items-start gap-4">
+                <div>
+                  <nav className="flex items-center gap-2 text-[10px] font-bold text-[#5d5e66] tracking-widest uppercase mb-1">
+                    <span>Portfólio</span>
+                    <span className="opacity-30">/</span>
+                    <span className="text-black font-black">{selectedProject?.name}</span>
+                  </nav>
+                  <h2 className="text-3xl font-extrabold tracking-tighter text-black uppercase">{viewMode === 'board' ? 'Quadro de Operação' : 'Layout de Infraestrutura'}</h2>
+                </div>
+                
+                {selectedProject?.type === 'CFTV' && (
+                  <div className="flex bg-neutral-100 p-1 rounded-xl gap-1">
+                    <button 
+                      onClick={() => setViewMode('board')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        viewMode === 'board' ? "bg-white text-black shadow-sm" : "text-neutral-400 hover:text-black"
+                      )}
+                    >
+                      <LayoutGrid size={14} /> Board
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('map')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        viewMode === 'map' ? "bg-white text-black shadow-sm" : "text-neutral-400 hover:text-black"
+                      )}
+                    >
+                      <MapIcon size={14} /> Projeto CFTV
+                    </button>
                   </div>
                 )}
               </div>
             </div>
-          ))}
+            
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2 mr-4">
+                {selectedProject?.members?.map(m => (
+                  <img key={m.id} src={m.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] object-cover" alt="" title={m.name} />
+                ))}
+                {!selectedProject?.members && users.slice(0, 3).map(u => (
+                  <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] object-cover" alt="" title={u.name} />
+                ))}
+                <div className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] bg-neutral-100 flex items-center justify-center text-[10px] font-bold">+5</div>
+              </div>
+              <button 
+                onClick={() => openEditProject(selectedProject!)}
+                className="p-2 hover:bg-neutral-100 rounded-full transition-colors mr-2"
+                title="Editar Projeto"
+              >
+                <MoreHorizontal size={20} />
+              </button>
+              <button 
+                onClick={() => handleDeleteProject(selectedProjectId!)}
+                className="p-2 hover:bg-red-50 text-red-500 rounded-full transition-colors mr-4"
+                title="Excluir Projeto"
+              >
+                <Trash2 size={20} />
+              </button>
+              <button 
+                onClick={() => {
+                  setTaskForm({ id: '', title: '', description: '', priority: 'Média', assignees: [], dueDate: new Date().toISOString().split('T')[0], status: 'Pendente', images: [] });
+                  setIsTaskModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-black text-white text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                <Plus size={14} /> Nova Task
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 min-h-0 relative">
+            {viewMode === 'board' ? (
+              <div className="absolute inset-0 flex overflow-x-auto p-8 pt-0 scrollbar-hide bg-transparent">
+                <div className="flex gap-6 h-full min-w-max">
+                  {columns.map(col => (
+                    <div 
+                      key={col.id} 
+                      className="w-80 flex flex-col h-full bg-white/5 backdrop-blur-sm rounded-3xl p-4 overflow-hidden"
+                      onDragOver={onDragOver}
+                      onDrop={(e) => onDrop(e, col.id)}
+                    >
+                      <div className="flex items-center justify-between mb-4 px-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
+                          <h3 className="text-[10px] font-extrabold text-black uppercase tracking-widest">{col.label}</h3>
+                          <span className="bg-neutral-100 px-2 py-0.5 rounded-full text-[10px] font-bold text-[#5d5e66]">
+                            {projectTasks.filter(t => t.status === col.id).length}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide pb-10">
+                        {projectTasks.filter(t => t.status === col.id).map(task => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            onDragStart={onDragStart}
+                            onClick={() => setSelectedTask(task)}
+                            openEditTask={openEditTask}
+                            handleDeleteTask={handleDeleteTask}
+                          />
+                        ))}
+                        
+                        {projectTasks.filter(t => t.status === col.id).length === 0 && (
+                          <div className="h-20 border-2 border-dashed border-neutral-100 rounded-xl flex items-center justify-center opacity-30">
+                            <p className="text-[8px] font-bold uppercase tracking-widest">Sem tasks</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : selectedProject && (
+              <div className="absolute inset-0">
+                <CFTVMapping 
+                  project={selectedProject} 
+                  onUpdate={async (data) => {
+                    await dataService.updateProject(selectedProject.id, {
+                      ...selectedProject,
+                      cftvData: data
+                    });
+                    refreshData();
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* New/Edit Task Modal */}
       <AnimatePresence>
@@ -624,6 +733,16 @@ export default function Projects() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Anexar Imagens (Links separados por vírgula)</label>
+                  <textarea 
+                    value={taskForm.images.join(', ')}
+                    onChange={e => setTaskForm({ ...taskForm, images: e.target.value.split(',').map(s => s.trim()).filter(s => s !== '') })}
+                    className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-medium focus:ring-1 focus:ring-black outline-none h-20" 
+                    placeholder="https://exemplo.com/imagem1.jpg, https://exemplo.com/imagem2.png"
+                  />
+                </div>
+
                 <div className="pt-8 border-t border-neutral-100">
                   <button 
                     onClick={handleSaveTask}
@@ -696,6 +815,7 @@ export default function Projects() {
                     >
                       <option>INFRA</option>
                       <option>SECURITY</option>
+                      <option>CFTV</option>
                       <option>DESIGN</option>
                       <option>OTIMIZAÇÃO</option>
                       <option>GERAL</option>
@@ -742,12 +862,26 @@ export default function Projects() {
                   </div>
                 </div>
 
-                <div className="pt-8 border-t border-neutral-100">
+                <div className="space-y-4 pt-8 border-t border-neutral-100">
+                  {saveError && (
+                    <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex items-center gap-3">
+                      <AlertCircle className="text-red-500 shrink-0" size={16} />
+                      <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest leading-normal">
+                        {saveError}
+                      </p>
+                    </div>
+                  )}
+
                   <button 
+                    type="button"
                     onClick={handleSaveProject}
-                    className="w-full py-4 bg-black text-white text-[10px] font-bold rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] transition-transform active:scale-[0.98]"
+                    disabled={isSaving}
+                    className={cn(
+                      "w-full py-4 bg-black text-white text-[10px] font-bold rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] transition-transform active:scale-[0.98]",
+                      isSaving && "opacity-50 cursor-not-allowed scale-100"
+                    )}
                   >
-                    {projectForm.id ? 'Salvar Alterações' : 'Lançar Projeto'}
+                    {isSaving ? 'Processando (Aguarde)...' : (projectForm.id ? 'Salvar Alterações' : 'Lançar Projeto')}
                   </button>
                 </div>
               </div>
