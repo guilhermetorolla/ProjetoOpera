@@ -9,12 +9,14 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMsg(null);
 
     try {
       if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
@@ -27,7 +29,7 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        setError('Verifique seu e-mail para confirmar o cadastro!');
+        setSuccessMsg('Conta criada com sucesso! Verifique seu e-mail para confirmar.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -88,6 +90,17 @@ export default function Login() {
               </motion.div>
             )}
 
+            {successMsg && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="flex items-center gap-2 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-[10px] font-bold uppercase tracking-wider"
+              >
+                <AlertCircle size={14} className="shrink-0" />
+                {successMsg}
+              </motion.div>
+            )}
+
             <div className="space-y-3">
               <label className="text-[9px] font-black tracking-[0.2em] text-white/40 uppercase ml-1">Credencial de Acesso</label>
               <div className="relative group">
@@ -128,7 +141,7 @@ export default function Login() {
               disabled={loading}
               className="w-full h-14 bg-white text-black font-black text-[11px] tracking-[0.2em] uppercase rounded-2xl shadow-[0_8px_24px_rgba(255,255,255,0.1)] hover:bg-neutral-100 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-4"
             >
-              {loading ? <Loader2 className="animate-spin" size={16} /> : (isRegistering ? 'Criação de Nodo' : 'Iniciar Sequência')}
+              {loading ? <Loader2 className="animate-spin" size={16} /> : (isRegistering ? 'Criar Conta' : 'Entrar')}
             </button>
           </form>
 
@@ -137,15 +150,15 @@ export default function Login() {
               onClick={() => window.location.reload()}
               className="text-[9px] font-black text-white/40 hover:text-white transition-colors uppercase tracking-[0.3em] flex items-center gap-2"
             >
-              <Loader2 size={12} className={cn(loading && "animate-spin")} /> Reinciciar Terminal de Dados
+              <Loader2 size={12} className={cn(loading && "animate-spin")} /> Reiniciar Terminal de Dados
             </button>
             <p className="text-center text-[10px] text-[#a0a0a0] font-bold tracking-widest uppercase">
-              {isRegistering ? 'Protocolo existente?' : 'Novo Terminal?'} 
+              {isRegistering ? 'Já tem conta?' : 'Novo por aqui?'} 
               <button 
                 onClick={() => setIsRegistering(!isRegistering)}
                 className="text-white hover:text-white/70 transition-all ml-2 underline underline-offset-4 decoration-white/20"
               >
-                {isRegistering ? 'Retornar' : 'Solicitar Token'}
+                {isRegistering ? 'Entrar' : 'Criar Conta'}
               </button>
             </p>
           </div>
