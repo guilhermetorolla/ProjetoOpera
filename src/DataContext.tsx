@@ -44,14 +44,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showAnimation, setShowAnimation] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('opero-show-animation');
-      return saved === null ? true : saved === 'true';
+      try {
+        const saved = localStorage.getItem('opero-show-animation');
+        return saved === null ? true : saved === 'true';
+      } catch (e) {
+        return true; // Fallback if localStorage is blocked
+      }
     }
     return true;
   });
 
   useEffect(() => {
-    localStorage.setItem('opero-show-animation', String(showAnimation));
+    try {
+      localStorage.setItem('opero-show-animation', String(showAnimation));
+    } catch (e) {
+      // Ignore if localStorage is blocked
+    }
   }, [showAnimation]);
 
   const refreshData = async () => {

@@ -32,10 +32,12 @@ export interface Task {
 
 export interface CFTVPoint {
   id: string;
-  type: 'camera' | 'box' | 'sensor';
+  type: 'camera' | 'camera_bullet' | 'camera_dome' | 'box' | 'sensor' | 'pole' | 'rack' | 'switch' | 'dvr' | 'nvr';
   x: number;
   y: number;
   label: string;
+  angle?: number;
+  fovRadius?: number;
 }
 
 export interface CFTVLink {
@@ -43,6 +45,8 @@ export interface CFTVLink {
   fromId: string;
   toId: string;
   type: 'utp' | 'fiber' | 'power';
+  length?: number; // Metragem estimada
+  path?: [number, number][]; // Caminho customizado (vértices desenhados)
 }
 
 export interface Project {
