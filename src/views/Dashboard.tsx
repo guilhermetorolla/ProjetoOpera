@@ -4,11 +4,13 @@ import { TrendingUp, Award, Shield, Timer, ArrowUpRight, Activity as ActivityIco
 import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip, Cell } from 'recharts';
 import { cn } from '../lib/utils';
 import { useData } from '../DataContext';
+import { useTheme } from 'next-themes';
 import { supabase } from '../lib/supabase';
 import AIProjectInsights from '../components/AIProjectInsights';
 
 export default function Dashboard({ onViewChange }: { onViewChange?: (v: string) => void }) {
   const { projects, tasks, activities, users, setSelectedProject } = useData();
+  const { theme } = useTheme();
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
 
   const stats = useMemo(() => {
@@ -76,15 +78,15 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
     >
       <div className="flex justify-between items-end">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#5d5e66] mb-1">Visão Geral</p>
-          <h2 className="text-4xl font-extrabold tracking-tighter text-black">Pulso do Espaço de Trabalho</h2>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#5d5e66] dark:text-white/40 mb-1">Visão Geral</p>
+          <h2 className="text-4xl font-extrabold tracking-tighter text-black dark:text-white">Pulso do Espaço de Trabalho</h2>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
             {users.map((u, i) => (
-              <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] object-cover shadow-sm" alt={u.name} />
+              <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] dark:border-[#070707] object-cover shadow-sm" alt={u.name} />
             ))}
-            <div className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] bg-neutral-100 flex items-center justify-center text-[10px] font-bold">+12</div>
+            <div className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] dark:border-[#070707] bg-neutral-100 dark:bg-white/10 flex items-center justify-center text-[10px] font-bold dark:text-white">+12</div>
           </div>
           <button 
             onClick={() => supabase.auth.signOut()}
@@ -94,7 +96,7 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
           </button>
           <button 
             onClick={() => setIsInviteModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-black text-white text-xs font-bold transition-all shadow-md active:scale-95"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-bold transition-all shadow-md active:scale-95"
           >
             Convidar Equipe
           </button>
@@ -112,26 +114,26 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white w-full max-w-md rounded-[40px] p-10 relative shadow-2xl"
+              className="bg-white dark:bg-[#121212] w-full max-w-md rounded-[40px] p-10 relative shadow-2xl border border-black/5 dark:border-white/10"
             >
-              <button onClick={() => setIsInviteModalOpen(false)} className="absolute top-8 right-8 p-2 hover:bg-neutral-50 rounded-full text-black"><LogOut size={20} className="rotate-180" /></button>
-              <h3 className="text-3xl font-extrabold tracking-tighter mb-4">Expandir Equipe</h3>
-              <p className="text-[#5d5e66] text-xs font-medium mb-8">Adicione novos talentos ao workspace estratégico do Opero.</p>
+              <button onClick={() => setIsInviteModalOpen(false)} className="absolute top-8 right-8 p-2 hover:bg-neutral-50 dark:hover:bg-white/5 rounded-full text-black dark:text-white transition-colors"><LogOut size={20} className="rotate-180" /></button>
+              <h3 className="text-3xl font-extrabold tracking-tighter mb-4 text-black dark:text-white">Expandir Equipe</h3>
+              <p className="text-[#5d5e66] dark:text-white/40 text-xs font-medium mb-8">Adicione novos talentos ao workspace estratégico do Opero.</p>
               
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">E-mail Corporativo</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">E-mail Corporativo</label>
                   <input 
                     type="email" 
                     value={inviteEmail}
                     onChange={e => setInviteEmail(e.target.value)}
-                    className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-bold focus:ring-1 focus:ring-black outline-none" 
+                    className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-bold text-black dark:text-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none" 
                     placeholder="talento@opero.com"
                   />
                 </div>
                 <button 
                   onClick={handleInvite}
-                  className="w-full py-4 bg-black text-white text-[10px] font-bold rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-transform mt-4"
+                  className="w-full py-4 bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-transform mt-4"
                 >
                   Enviar Convite
                 </button>
@@ -145,14 +147,14 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Efficiency Index */}
-        <div className="col-span-1 md:col-span-12 lg:col-span-6 bg-neutral-100/50 backdrop-blur-xl p-8 rounded-2xl border border-black/5 shadow-sm flex flex-col justify-between min-h-[340px]">
+        <div className="col-span-1 md:col-span-12 lg:col-span-6 bg-transparent backdrop-blur-sm p-8 rounded-2xl border border-black/5 dark:border-white/10 shadow-sm flex flex-col justify-between min-h-[340px]">
           <div>
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-[#5d5e66]/60 mb-2">Eficiência: {stats.featuredProject?.name}</p>
-                <h3 className="text-5xl font-extrabold tracking-tighter text-black">{stats.efficiency}%</h3>
+                <p className="text-xs font-bold uppercase tracking-widest text-[#5d5e66]/60 dark:text-white/40 mb-2">Eficiência: {stats.featuredProject?.name}</p>
+                <h3 className="text-5xl font-extrabold tracking-tighter text-black dark:text-white">{stats.efficiency}%</h3>
               </div>
-              <div className="bg-black/5 text-black px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 w-fit">
+              <div className="bg-black/5 dark:bg-white/10 text-black dark:text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 w-fit">
                 <TrendingUp size={12} /> +12% vs última semana
               </div>
             </div>
@@ -176,7 +178,7 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
-                          <div className="bg-black text-white px-2 py-1 rounded text-[10px] font-bold">
+                          <div className="bg-black dark:bg-white text-white dark:text-black px-2 py-1 rounded text-[10px] font-bold">
                             {payload[0].value}%
                           </div>
                         );
@@ -193,7 +195,7 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
                     {chartData.map((entry, index) => (
                       <Cell 
                         key={`cell-${index}`} 
-                        fill={index === hoveredBarIndex || index === 4 ? '#000000' : '#dcdbe6'} 
+                        fill={index === hoveredBarIndex || index === 4 || (theme === 'dark' && index === hoveredBarIndex) ? (theme === 'dark' ? '#ffffff' : '#000000') : (theme === 'dark' ? '#ffffff20' : '#dcdbe6')} 
                         className="transition-all duration-300 cursor-pointer"
                       />
                     ))}
@@ -202,58 +204,58 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
               </ResponsiveContainer>
             </div>
           </div>
-          <p className="text-xs text-[#5d5e66] mt-4">{stats.completedTasks} de {stats.totalTasks} tarefas resolvidas neste ciclo.</p>
+          <p className="text-xs text-[#5d5e66] dark:text-white/40 mt-4">{stats.completedTasks} de {stats.totalTasks} tarefas resolvidas neste ciclo.</p>
         </div>
 
         {/* Workload */}
-        <div className="col-span-1 md:col-span-6 lg:col-span-3 bg-neutral-100/50 backdrop-blur-xl p-6 rounded-2xl flex flex-col justify-between min-h-[340px] border border-black/5 shadow-sm">
-          <h3 className="text-sm font-bold tracking-tight">Carga de Trabalho</h3>
+        <div className="col-span-1 md:col-span-6 lg:col-span-3 bg-transparent backdrop-blur-sm p-6 rounded-2xl flex flex-col justify-between min-h-[340px] border border-black/5 dark:border-white/10 shadow-sm">
+          <h3 className="text-sm font-bold tracking-tight text-black dark:text-white">Carga de Trabalho</h3>
           <div className="space-y-6 my-6">
             {stats.userWorkload.map((u, i) => (
               <div key={u.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <img src={u.avatar} className="w-6 h-6 rounded-md object-cover" alt="" />
-                    <span className="text-xs font-semibold">{u.name}</span>
+                    <span className="text-xs font-semibold text-black dark:text-white">{u.name}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-[#5d5e66]">{u.load}%</span>
+                  <span className="text-[10px] font-bold text-[#5d5e66] dark:text-white/40">{u.load}%</span>
                 </div>
-                <div className="w-full h-1 bg-black/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-black transition-all duration-500" style={{ width: `${u.load}%` }}></div>
+                <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-black dark:bg-white transition-all duration-500" style={{ width: `${u.load}%` }}></div>
                 </div>
               </div>
             ))}
           </div>
           <button 
             onClick={() => onViewChange?.('resource_map')}
-            className="text-[10px] font-bold text-black uppercase tracking-widest flex items-center gap-1 group"
+            className="text-[10px] font-bold text-black dark:text-white uppercase tracking-widest flex items-center gap-1 group"
           >
             Ver Mapa de Recursos <ArrowUpRight size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
         </div>
 
         {/* Active Projects */}
-        <div className="col-span-1 md:col-span-6 lg:col-span-3 bg-neutral-100/50 backdrop-blur-xl p-6 rounded-2xl border border-black/5 shadow-sm flex flex-col justify-between min-h-[340px]">
+        <div className="col-span-1 md:col-span-6 lg:col-span-3 bg-transparent backdrop-blur-sm p-6 rounded-2xl border border-black/5 dark:border-white/10 shadow-sm flex flex-col justify-between min-h-[340px]">
           <div>
-            <ActivityIcon className="text-black mb-4" size={20} />
-            <h3 className="text-sm font-bold text-[#5d5e66] tracking-tight">Projetos Ativos</h3>
-            <p className="text-4xl font-extrabold tracking-tighter mt-1">{stats.activeProjectsCount}</p>
+            <ActivityIcon className="text-black dark:text-white mb-4" size={20} />
+            <h3 className="text-sm font-bold text-[#5d5e66] dark:text-white/40 tracking-tight">Projetos Ativos</h3>
+            <p className="text-4xl font-extrabold tracking-tighter mt-1 text-black dark:text-white">{stats.activeProjectsCount}</p>
           </div>
           <div className="space-y-3 mt-4">
             {projects.slice(0, 3).map((p) => (
               <div 
                 key={p.id} 
                 onClick={() => { setSelectedProject(p); onViewChange?.('analytics'); }}
-                className="flex items-center justify-between text-[10px] border-b border-black/5 pb-2 cursor-pointer hover:bg-black/5 transition-colors group/p"
+                className="flex items-center justify-between text-[10px] border-b border-black/5 dark:border-white/5 pb-2 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors group/p"
               >
-                <span className="text-[#5d5e66] truncate pr-2 max-w-[120px] group-hover/p:text-black transition-colors">{p.name}</span>
-                <span className="font-bold">{p.progress}%</span>
+                <span className="text-[#5d5e66] dark:text-white/40 truncate pr-2 max-w-[120px] group-hover/p:text-black dark:group-hover/p:text-white transition-colors">{p.name}</span>
+                <span className="font-bold text-black dark:text-white">{p.progress}%</span>
               </div>
             ))}
           </div>
           <button 
             onClick={() => onViewChange?.('schedule')}
-            className="mt-6 text-[10px] font-bold text-[#5d5e66] hover:text-black uppercase tracking-widest flex items-center gap-1 transition-colors"
+            className="mt-6 text-[10px] font-bold text-[#5d5e66] dark:text-white/40 hover:text-black dark:hover:text-white uppercase tracking-widest flex items-center gap-1 transition-colors"
           >
             Reservar Ambiente <ArrowUpRight size={12} />
           </button>
@@ -262,10 +264,10 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Timeline */}
-        <div className="col-span-1 lg:col-span-8 bg-white/40 backdrop-blur-xl p-8 rounded-2xl border border-white/10 shadow-sm">
+        <div className="col-span-1 lg:col-span-8 bg-transparent backdrop-blur-sm p-8 rounded-2xl border border-black/10 dark:border-white/10 shadow-sm">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-extrabold tracking-tighter">Atividade da Linha do Tempo</h3>
-            <button className="p-2 hover:bg-neutral-50 rounded-md transition-colors text-[#5d5e66]">
+            <h3 className="text-xl font-extrabold tracking-tighter text-black dark:text-white">Atividade da Linha do Tempo</h3>
+            <button className="p-2 hover:bg-neutral-50 dark:hover:bg-white/5 rounded-md transition-colors text-[#5d5e66] dark:text-white/40">
               <Timer size={18} />
             </button>
           </div>
@@ -276,28 +278,28 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
                 <div className="flex flex-col items-center">
                   <div className={cn(
                     "w-3 h-3 rounded-full z-10 mt-1.5",
-                    act.action.toLowerCase().includes('concluiu') || act.action.toLowerCase().includes('resolveu') ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-neutral-200"
+                    act.action.toLowerCase().includes('concluiu') || act.action.toLowerCase().includes('resolveu') ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-neutral-200 dark:bg-white/20"
                   )} />
                   {i < activities.length - 1 && (
-                    <div className="w-px h-[calc(100%+2rem)] bg-neutral-100 absolute top-1.5" />
+                    <div className="w-px h-[calc(100%+2rem)] bg-neutral-100 dark:bg-white/5 absolute top-1.5" />
                   )}
                 </div>
                 <div className="pb-2 flex-1">
-                  <p className="text-[10px] font-bold text-[#5d5e66] uppercase tracking-widest mb-1">{act.time}</p>
+                  <p className="text-[10px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-widest mb-1">{act.time}</p>
                   <div className={cn(
-                    "p-4 rounded-xl transition-all border border-transparent hover:border-black/5 hover:bg-white/50",
-                    i === 0 ? "bg-[#eeedf7]" : "bg-transparent shadow-sm"
+                    "p-4 rounded-xl transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5 hover:bg-white/50 dark:hover:bg-white/5",
+                    i === 0 ? "bg-[#eeedf7] dark:bg-white/5" : "bg-transparent shadow-sm"
                   )}>
                     <div className="flex items-center gap-3">
                       <img src={act.user.avatar} className="w-6 h-6 rounded-full object-cover" alt="" />
-                      <p className="text-sm">
-                        <span className="font-bold">{act.user.name}</span> <span className="opacity-70">{act.action}</span> <span className="font-bold text-black border-b border-black/10">{act.target}</span>
+                      <p className="text-sm text-black dark:text-white">
+                        <span className="font-bold">{act.user.name}</span> <span className="opacity-70">{act.action}</span> <span className="font-bold text-black dark:text-white border-b border-black/10 dark:border-white/10">{act.target}</span>
                       </p>
                     </div>
                     {act.tags && (
                       <div className="mt-3 flex gap-2 pl-9">
                         {act.tags.map(t => (
-                          <span key={t} className="bg-black text-white px-2 py-0.5 rounded-[4px] text-[8px] font-bold tracking-widest">{t}</span>
+                          <span key={t} className="bg-black dark:bg-white text-white dark:text-black px-2 py-0.5 rounded-[4px] text-[8px] font-bold tracking-widest">{t}</span>
                         ))}
                       </div>
                     )}
@@ -305,21 +307,21 @@ export default function Dashboard({ onViewChange }: { onViewChange?: (v: string)
                 </div>
               </div>
             )) : (
-              <div className="text-center py-12 opacity-30 uppercase text-[10px] font-black tracking-widest">Aguardando telemetria de atividade...</div>
+              <div className="text-center py-12 opacity-30 uppercase text-[10px] font-black tracking-widest text-[#5d5e66] dark:text-white">Aguardando telemetria de atividade...</div>
             )}
           </div>
         </div>
 
         {/* Sidebar Cards */}
         <div className="col-span-4 space-y-6">
-          <div className="bg-white/40 backdrop-blur-xl p-6 rounded-2xl border-l-4 border-black border-y border-r border-white/10 shadow-sm">
-            <h4 className="text-sm font-bold mb-2">Aprovação Pendente</h4>
-            <p className="text-xs text-[#5d5e66] leading-relaxed mb-6">
+          <div className="bg-transparent backdrop-blur-sm p-6 rounded-2xl border-l-4 border-black dark:border-white border-y border-r border-black/10 dark:border-white/10 shadow-sm">
+            <h4 className="text-sm font-bold mb-2 text-black dark:text-white">Aprovação Pendente</h4>
+            <p className="text-xs text-[#5d5e66] dark:text-white/40 leading-relaxed mb-6">
               {stats.totalTasks - stats.completedTasks} especificações técnicas exigem sua assinatura final antes do fechamento da sprint.
             </p>
             <button 
               onClick={() => onViewChange?.('projects')}
-              className="w-full py-2.5 bg-black text-white text-[10px] font-bold rounded-md uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+              className="w-full py-2.5 bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold rounded-md uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
             >
               Revisar Agora
             </button>

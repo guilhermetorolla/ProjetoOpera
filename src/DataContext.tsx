@@ -15,11 +15,14 @@ interface DataContextType {
   session: any | null;
   isAuthReady: boolean;
   selectedProject: Project | null;
+  showAnimation: boolean;
+  setShowAnimation: (show: boolean) => void;
   setCurrentUser: React.Dispatch<React.SetStateAction<User>>;
   setSelectedProject: React.Dispatch<React.SetStateAction<Project | null>>;
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   setActivities: React.Dispatch<React.SetStateAction<Activity[]>>;
+  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   setEnvironments: React.Dispatch<React.SetStateAction<Environment[]>>;
   setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
   logActivity: (action: string, target: string, type: string, tags?: string[]) => void;
@@ -34,25 +37,38 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
   const [environments, setEnvironments] = useState<Environment[]>(initialEnvironments);
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
-  const [users] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>(initialUsers);
   const [currentUser, setCurrentUser] = useState<User>(initialCurrentUser);
   const [session, setSession] = useState<any>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [showAnimation, setShowAnimation] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('opero-show-animation');
+      return saved === null ? true : saved === 'true';
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('opero-show-animation', String(showAnimation));
+  }, [showAnimation]);
 
   const refreshData = async () => {
     try {
       console.log('DataContext: Iniciando refreshData...');
-      const [p, t, a] = await Promise.all([
+      const [p, t, a, u] = await Promise.all([
         dataService.getProjects(),
         dataService.getTasks(),
-        dataService.getActivities()
+        dataService.getActivities(),
+        dataService.getUsers()
       ]);
       
-      console.log(`DataContext: Dados recebidos - Projetos: ${p.length}, Tarefas: ${t.length}, Atividades: ${a.length}`);
+      console.log(`DataContext: Dados recebidos - Projetos: ${p.length}, Tarefas: ${t.length}, Atividades: ${a.length}, Usuários: ${u.length}`);
       setProjects(p);
       setTasks(t);
       setActivities(a);
+      setUsers(u);
     } catch (error) {
       console.warn('DataContext: Erro ao buscar dados do Supabase, mantendo estado atual:', error);
     }
@@ -146,11 +162,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       session,
       isAuthReady,
       selectedProject,
+      showAnimation,
+      setShowAnimation,
       setCurrentUser,
       setSelectedProject,
       setProjects,
       setTasks,
       setActivities,
+      setUsers,
       setEnvironments,
       setBookings,
       logActivity,

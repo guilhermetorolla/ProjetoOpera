@@ -19,24 +19,29 @@ import Editor from './views/Editor';
 import Schedule from './views/Schedule';
 import Login from './views/Login';
 import Settings from './views/Settings';
+import Documents from './views/Documents';
 import ResourceMap from './views/ResourceMap';
-import AnoAI from './components/ui/animated-shader-background';
+import { DottedSurface } from './components/ui/dotted-surface';
 import { cn } from './lib/utils';
 import { supabase } from './lib/supabase';
 
 import { useData, DataProvider } from './DataContext';
+import { ThemeProvider } from 'next-themes';
 
 export default function App() {
   return (
-    <DataProvider>
-      <AppContent />
-    </DataProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
+    </ThemeProvider>
   );
 }
 
 function AppContent() {
-  const { session, isAuthReady } = useData();
+  const { session, isAuthReady, showAnimation } = useData();
   const [activeView, setActiveView] = useState('dashboard');
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [userSidebarPreference, setUserSidebarPreference] = useState(true);
   const [showTopbar, setShowTopbar] = useState(true);
@@ -66,7 +71,26 @@ function AppContent() {
       case 'analytics':
         return <ProjectDetail key="analytics" />;
       case 'documents':
-        return <Editor key="documents" />;
+        return (
+          <Documents 
+            key="documents" 
+            onOpenDocument={(id) => {
+              setSelectedDocId(id);
+              setActiveView('editor');
+            }} 
+          />
+        );
+      case 'editor':
+        return (
+          <Editor 
+            key="editor" 
+            documentId={selectedDocId} 
+            onBack={() => {
+              setSelectedDocId(null);
+              setActiveView('documents');
+            }} 
+          />
+        );
       case 'schedule':
         return <Schedule key="schedule" />;
       case 'settings':
@@ -79,12 +103,12 @@ function AppContent() {
   if (!isAuthReady) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
-        <AnoAI />
+        <DottedSurface isAnimated={showAnimation} />
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1, scale: [1, 1.2, 1] }}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="text-2xl font-black tracking-tighter text-white z-10 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+          className="text-2xl font-black tracking-tighter text-black dark:text-white z-10"
         >
           Opero
         </motion.div>
@@ -93,8 +117,8 @@ function AppContent() {
   }
 
   return (
-    <div className="relative w-full min-h-screen">
-      <AnoAI />
+    <div className="relative w-full min-h-screen bg-white dark:bg-[#070707] text-black dark:text-white transition-colors duration-500">
+      <DottedSurface isAnimated={showAnimation} />
       
       {!session ? (
         <Login />
@@ -113,7 +137,7 @@ function AppContent() {
           
           <div className={cn(
             "flex-1 flex flex-col relative z-10 transition-[padding] duration-300 ease-in-out",
-            isSidebarVisible ? "pl-64" : "pl-0"
+            isSidebarVisible ? "pl-64" : "pl-20"
           )}>
             <Topbar 
               isSidebarVisible={isSidebarVisible} 
@@ -147,9 +171,9 @@ function AppContent() {
           </div>
 
           {/* Floating Global Context Button */}
-          {activeView !== 'documents' && (
+          {activeView !== 'documents' && activeView !== 'editor' && (
             <button className={cn(
-                "fixed bottom-8 right-8 h-14 w-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group z-50",
+                "fixed bottom-8 right-8 h-14 w-14 bg-black text-white dark:bg-white dark:text-black rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group z-50",
                 !showTopbar && "translate-y-24 opacity-0"
               )}>
               <motion.div

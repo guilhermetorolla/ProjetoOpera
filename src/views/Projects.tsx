@@ -47,38 +47,38 @@ const TaskCard = React.memo(({ task, onDragStart, onClick, openEditTask, handleD
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
       onClick={onClick}
-      className="bg-white/40 backdrop-blur-md p-5 rounded-xl shadow-[0_4px_12px_-2px_rgba(0,0,0,0.03)] border border-neutral-100 hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] transition-all cursor-grab active:cursor-grabbing group"
+      className="bg-white/40 dark:bg-white/5 backdrop-blur-md p-5 rounded-xl shadow-[0_4px_12px_-2px_rgba(0,0,0,0.03)] dark:shadow-none border border-neutral-100 dark:border-white/10 hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] dark:hover:bg-white/10 transition-all cursor-grab active:cursor-grabbing group"
     >
       <div className="flex justify-between items-start mb-3">
         <span className={cn(
           "text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-[4px]",
-          task.priority === 'Urgente' ? "bg-red-50 text-red-600" : 
-          task.priority === 'Alta' ? "bg-amber-50 text-amber-600" :
-          "bg-neutral-100 text-[#5d5e66]"
+          task.priority === 'Urgente' ? "bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400" : 
+          task.priority === 'Alta' ? "bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400" :
+          "bg-neutral-100 dark:bg-white/10 text-[#5d5e66] dark:text-white/40"
         )}>
           {task.priority}
         </span>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
             onClick={(e) => { e.stopPropagation(); openEditTask(task); }}
-            className="p-1 hover:bg-neutral-100 rounded"
+            className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded dark:text-white/60"
           >
             <MoreHorizontal size={12} />
           </button>
           <button 
             onClick={(e) => handleDeleteTask(task.id, e)}
-            className="p-1 hover:bg-red-50 text-red-500 rounded"
+            className="p-1 hover:bg-red-50 dark:hover:bg-red-500/20 text-red-500 rounded"
           >
             <Trash2 size={12} />
           </button>
         </div>
       </div>
 
-      <h4 className="text-sm font-bold text-black mb-1 leading-snug">{task.title}</h4>
-      <p className="text-[10px] text-[#5d5e66] mb-4">{task.dueDate}</p>
+      <h4 className="text-sm font-bold text-black dark:text-white mb-1 leading-snug">{task.title}</h4>
+      <p className="text-[10px] text-[#5d5e66] dark:text-white/40 mb-4">{task.dueDate}</p>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 text-[#5d5e66]/60">
+        <div className="flex items-center gap-3 text-[#5d5e66]/60 dark:text-white/20">
           <div className="flex items-center gap-1">
             <MessageSquare size={12} />
             <span className="text-[10px] font-bold">{task.comments?.length || 0}</span>
@@ -93,7 +93,7 @@ const TaskCard = React.memo(({ task, onDragStart, onClick, openEditTask, handleD
         
         <div className="flex -space-x-1.5">
           {task.assignees.map(u => (
-            <img key={u.id} src={u.avatar} className="w-6 h-6 rounded-full border-2 border-white object-cover" alt="" title={u.name} />
+            <img key={u.id} src={u.avatar} className="w-6 h-6 rounded-full border-2 border-white dark:border-[#121212] object-cover shadow-sm" alt="" title={u.name} />
           ))}
         </div>
       </div>
@@ -416,20 +416,20 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
       {!selectedProjectId ? (
         <div className="flex-1 flex flex-col p-12 overflow-y-auto scrollbar-hide">
           <header className="mb-12">
-            <nav className="flex items-center gap-2 text-[10px] font-bold text-[#5d5e66] tracking-widest uppercase mb-2">
+            <nav className="flex items-center gap-2 text-[10px] font-bold text-[#5d5e66] dark:text-white/40 tracking-widest uppercase mb-2">
               <span>Opero</span>
               <span className="opacity-30">/</span>
-              <span className="text-black">Portfólio de Projetos</span>
+              <span className="text-black dark:text-white">Portfólio de Projetos</span>
             </nav>
             <div className="flex justify-between items-end">
-              <h2 className="text-5xl font-extrabold tracking-tighter text-black">Hub de Iniciativas</h2>
+              <h2 className="text-5xl font-extrabold tracking-tighter text-black dark:text-white uppercase transition-colors">Hub de Iniciativas</h2>
               <button 
                 onClick={() => {
                   setProjectToEdit(null);
                   setProjectForm({ id: '', name: '', description: '', type: 'GERAL', status: 'Em Andamento', members: [] });
                   setIsProjectModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-black text-white text-xs font-bold transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black text-xs font-bold transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Plus size={16} /> Novo Projeto
               </button>
@@ -442,20 +442,20 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                 key={project.id}
                 whileHover={{ y: -5 }}
                 onClick={() => setSelectedProjectId(project.id)}
-                className="bg-white/40 backdrop-blur-xl p-8 rounded-[32px] border border-neutral-100 shadow-sm cursor-pointer hover:shadow-2xl transition-all group relative"
+                className="bg-white/40 dark:bg-white/5 backdrop-blur-xl p-8 rounded-[32px] border border-neutral-100 dark:border-white/10 shadow-sm cursor-pointer hover:shadow-2xl transition-all group relative"
               >
                 <div className="flex justify-between items-start mb-8">
-                  <span className="text-[10px] font-bold text-[#5d5e66] bg-neutral-100 px-3 py-1 rounded-full uppercase tracking-widest">{project.type}</span>
+                  <span className="text-[10px] font-bold text-[#5d5e66] dark:text-white/40 bg-neutral-100 dark:bg-white/10 px-3 py-1 rounded-full uppercase tracking-widest">{project.type}</span>
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={(e) => openEditProject(project, e)}
-                      className="p-2 hover:bg-neutral-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-2 hover:bg-neutral-50 dark:hover:bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity dark:text-white/60"
                     >
                       <MoreHorizontal size={16} />
                     </button>
                     <button 
                       onClick={(e) => handleDeleteProject(project.id, e)}
-                      className="p-2 hover:bg-red-50 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-2 hover:bg-red-50 dark:hover:bg-red-500/20 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -466,29 +466,29 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                   </div>
                 </div>
                 
-                <h3 className="text-2xl font-extrabold tracking-tight mb-2 group-hover:text-black transition-colors">{project.name}</h3>
-                <p className="text-xs text-[#5d5e66] leading-relaxed mb-8 line-clamp-2">{project.description}</p>
+                <h2 className="text-2xl font-extrabold tracking-tight mb-2 text-black dark:text-white group-hover:text-black dark:group-hover:text-white transition-colors">{project.name}</h2>
+                <p className="text-xs text-[#5d5e66] dark:text-white/40 leading-relaxed mb-8 line-clamp-2">{project.description}</p>
                 
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] font-bold text-[#5d5e66] uppercase">
+                    <div className="flex justify-between text-[10px] font-bold text-[#5d5e66] dark:text-white/40 uppercase">
                       <span>Progresso</span>
                       <span>{project.progress}%</span>
                     </div>
-                    <div className="h-1 w-full bg-neutral-50 rounded-full overflow-hidden">
-                      <div className="h-full bg-black transition-all duration-1000" style={{ width: `${project.progress}%` }} />
+                    <div className="h-1 w-full bg-neutral-50 dark:bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-black dark:bg-white transition-all duration-1000" style={{ width: `${project.progress}%` }} />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-neutral-50">
+                  <div className="flex items-center justify-between pt-4 border-t border-neutral-50 dark:border-white/5">
                     <div className="flex -space-x-2">
                       {users.slice(0, 3).map(u => (
-                        <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-white object-cover" alt="" />
+                        <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-white dark:border-neutral-900 object-cover" alt="" />
                       ))}
                     </div>
                     <div 
                       onClick={(e) => navigateToDetails(project, e)}
-                      className="flex items-center gap-1.5 text-black font-bold text-xs uppercase tracking-tighter hover:opacity-70 transition-opacity"
+                      className="flex items-center gap-1.5 text-black dark:text-white font-bold text-xs uppercase tracking-tighter hover:opacity-70 transition-opacity"
                     >
                       Detalhamento <TrendingUp size={14} />
                     </div>
@@ -501,34 +501,34 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Kanban Header */}
-          <div className="px-8 py-6 flex items-end justify-between shrink-0 glass-panel border-none rounded-none m-0 shadow-sm z-30">
+          <div className="px-8 py-6 flex items-end justify-between shrink-0 glass-panel border-none rounded-none m-0 shadow-sm z-30 bg-white/20 dark:bg-black/20 backdrop-blur-md">
             <div className="flex items-center gap-6">
               <button 
                 onClick={() => {
                   setSelectedProjectId(null);
                   setViewMode('board');
                 }}
-                className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
+                className="p-2 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-full transition-colors text-black dark:text-white"
               >
                 <ArrowLeft size={20} />
               </button>
               <div className="flex items-start gap-4">
                 <div>
-                  <nav className="flex items-center gap-2 text-[10px] font-bold text-[#5d5e66] tracking-widest uppercase mb-1">
+                  <nav className="flex items-center gap-2 text-[10px] font-bold text-[#5d5e66] dark:text-white/40 tracking-widest uppercase mb-1">
                     <span>Portfólio</span>
                     <span className="opacity-30">/</span>
-                    <span className="text-black font-black">{selectedProject?.name}</span>
+                    <span className="text-black dark:text-white font-black">{selectedProject?.name}</span>
                   </nav>
-                  <h2 className="text-3xl font-extrabold tracking-tighter text-black uppercase">{viewMode === 'board' ? 'Quadro de Operação' : 'Layout de Infraestrutura'}</h2>
+                  <h2 className="text-3xl font-extrabold tracking-tighter text-black dark:text-white uppercase">{viewMode === 'board' ? 'Quadro de Operação' : 'Layout de Infraestrutura'}</h2>
                 </div>
                 
                 {selectedProject?.type === 'CFTV' && (
-                  <div className="flex bg-neutral-100 p-1 rounded-xl gap-1">
+                  <div className="flex bg-neutral-100 dark:bg-white/10 p-1 rounded-xl gap-1">
                     <button 
                       onClick={() => setViewMode('board')}
                       className={cn(
                         "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
-                        viewMode === 'board' ? "bg-white text-black shadow-sm" : "text-neutral-400 hover:text-black"
+                        viewMode === 'board' ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm" : "text-neutral-400 dark:text-white/20 hover:text-black dark:hover:text-white"
                       )}
                     >
                       <LayoutGrid size={14} /> Board
@@ -537,7 +537,7 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                       onClick={() => setViewMode('map')}
                       className={cn(
                         "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
-                        viewMode === 'map' ? "bg-white text-black shadow-sm" : "text-neutral-400 hover:text-black"
+                        viewMode === 'map' ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm" : "text-neutral-400 dark:text-white/20 hover:text-black dark:hover:text-white"
                       )}
                     >
                       <MapIcon size={14} /> Projeto CFTV
@@ -550,23 +550,23 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2 mr-4">
                 {selectedProject?.members?.map(m => (
-                  <img key={m.id} src={m.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] object-cover" alt="" title={m.name} />
+                  <img key={m.id} src={m.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] dark:border-[#070707] object-cover" alt="" title={m.name} />
                 ))}
                 {!selectedProject?.members && users.slice(0, 3).map(u => (
-                  <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] object-cover" alt="" title={u.name} />
+                  <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] dark:border-[#070707] object-cover" alt="" title={u.name} />
                 ))}
-                <div className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] bg-neutral-100 flex items-center justify-center text-[10px] font-bold">+5</div>
+                <div className="w-8 h-8 rounded-full border-2 border-[#fbf8ff] dark:border-[#070707] bg-neutral-100 dark:bg-white/10 flex items-center justify-center text-[10px] font-bold dark:text-white">+5</div>
               </div>
               <button 
                 onClick={() => openEditProject(selectedProject!)}
-                className="p-2 hover:bg-neutral-100 rounded-full transition-colors mr-2"
+                className="p-2 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-full transition-colors mr-2 dark:text-white/60"
                 title="Editar Projeto"
               >
                 <MoreHorizontal size={20} />
               </button>
               <button 
                 onClick={() => handleDeleteProject(selectedProjectId!)}
-                className="p-2 hover:bg-red-50 text-red-500 rounded-full transition-colors mr-4"
+                className="p-2 hover:bg-red-50 dark:hover:bg-red-500/20 text-red-500 rounded-full transition-colors mr-4"
                 title="Excluir Projeto"
               >
                 <Trash2 size={20} />
@@ -576,7 +576,7 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                   setTaskForm({ id: '', title: '', description: '', priority: 'Média', assignees: [], dueDate: new Date().toISOString().split('T')[0], status: 'Pendente', images: [] });
                   setIsTaskModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-black text-white text-xs font-bold transition-all shadow-md active:scale-95"
+                className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-bold transition-all shadow-md active:scale-95"
               >
                 <Plus size={14} /> Nova Task
               </button>
@@ -588,21 +588,21 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
               <div className="absolute inset-0 flex overflow-x-auto p-8 pt-0 scrollbar-hide bg-transparent">
                 <div className="flex gap-6 h-full min-w-max">
                   {columns.map(col => (
-                    <div 
-                      key={col.id} 
-                      className="w-80 flex flex-col h-full bg-white/5 backdrop-blur-sm rounded-3xl p-4 overflow-hidden"
-                      onDragOver={onDragOver}
-                      onDrop={(e) => onDrop(e, col.id)}
-                    >
-                      <div className="flex items-center justify-between mb-4 px-1">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
-                          <h3 className="text-[10px] font-extrabold text-black uppercase tracking-widest">{col.label}</h3>
-                          <span className="bg-neutral-100 px-2 py-0.5 rounded-full text-[10px] font-bold text-[#5d5e66]">
-                            {projectTasks.filter(t => t.status === col.id).length}
-                          </span>
+                      <div 
+                        key={col.id} 
+                        className="w-80 flex flex-col h-full bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-3xl p-4 overflow-hidden border border-black/5 dark:border-white/5"
+                        onDragOver={onDragOver}
+                        onDrop={(e) => onDrop(e, col.id)}
+                      >
+                        <div className="flex items-center justify-between mb-4 px-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
+                            <h3 className="text-[10px] font-extrabold text-black dark:text-white uppercase tracking-widest">{col.label}</h3>
+                            <span className="bg-neutral-100 dark:bg-white/10 px-2 py-0.5 rounded-full text-[10px] font-bold text-[#5d5e66] dark:text-white/40">
+                              {projectTasks.filter(t => t.status === col.id).length}
+                            </span>
+                          </div>
                         </div>
-                      </div>
 
                       <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide pb-10">
                         {projectTasks.filter(t => t.status === col.id).map(task => (
@@ -656,39 +656,39 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white w-full max-w-xl rounded-[40px] p-12 relative shadow-2xl"
+              className="bg-white dark:bg-[#121212] w-full max-w-xl rounded-[40px] p-12 relative shadow-2xl border border-black/5 dark:border-white/10"
             >
               <button 
                 onClick={() => setIsTaskModalOpen(false)}
-                className="absolute top-8 right-8 p-3 hover:bg-neutral-50 rounded-full transition-colors"
+                className="absolute top-8 right-8 p-3 hover:bg-neutral-50 dark:hover:bg-white/5 rounded-full transition-colors text-black dark:text-white"
               >
                 <X size={24} />
               </button>
 
               <header className="mb-12">
-                <nav className="text-[10px] font-bold text-[#5d5e66] tracking-widest uppercase mb-2">Engenharia / {taskForm.id ? 'Editar' : 'Nova'} Operação</nav>
-                <h3 className="text-4xl font-extrabold tracking-tighter">{taskForm.id ? 'Refinar' : 'Criar'} Tarefa Técnica</h3>
+                <nav className="text-[10px] font-bold text-[#5d5e66] dark:text-white/40 tracking-widest uppercase mb-2">Engenharia / {taskForm.id ? 'Editar' : 'Nova'} Operação</nav>
+                <h3 className="text-4xl font-extrabold tracking-tighter text-black dark:text-white">{taskForm.id ? 'Refinar' : 'Criar'} Tarefa Técnica</h3>
               </header>
 
               <div className="space-y-8">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Título da Task</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Título da Task</label>
                   <input 
                     type="text" 
                     value={taskForm.title}
                     onChange={e => setTaskForm({ ...taskForm, title: e.target.value })}
-                    className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-bold focus:ring-1 focus:ring-black outline-none" 
+                    className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-bold text-black dark:text-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none" 
                     placeholder="Ex: Auditoria de Segurança Q4"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Prioridade</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Prioridade</label>
                     <select 
                       value={taskForm.priority}
                       onChange={e => setTaskForm({ ...taskForm, priority: e.target.value as Priority })}
-                      className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none appearance-none"
+                      className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-bold text-black dark:text-white focus:ring-2 focus:ring-black/5 dark:focus:ring-white/5 outline-none appearance-none"
                     >
                       <option>Baixa</option>
                       <option>Média</option>
@@ -697,18 +697,18 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Entrega Final</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Entrega Final</label>
                     <input 
                       type="date" 
                       value={taskForm.dueDate}
                       onChange={e => setTaskForm({ ...taskForm, dueDate: e.target.value })}
-                      className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-bold focus:ring-1 focus:ring-black outline-none" 
+                      className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-bold text-black dark:text-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none" 
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Designar Responsáveis</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Designar Responsáveis</label>
                   <div className="flex flex-wrap gap-2">
                     {users.map(u => (
                       <button
@@ -722,8 +722,8 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                         className={cn(
                           "flex items-center gap-2 p-1.5 rounded-full border transition-all",
                           taskForm.assignees.includes(u.id) 
-                            ? "bg-black border-black text-white" 
-                            : "bg-white border-neutral-100 text-[#5d5e66]"
+                            ? "bg-black dark:bg-white border-black dark:border-white text-white dark:text-black" 
+                            : "bg-white dark:bg-white/5 border-neutral-100 dark:border-white/10 text-[#5d5e66] dark:text-white/40"
                         )}
                       >
                         <img src={u.avatar} className="w-6 h-6 rounded-full object-cover" alt="" />
@@ -734,19 +734,19 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Anexar Imagens (Links separados por vírgula)</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Anexar Imagens (Links)</label>
                   <textarea 
                     value={taskForm.images.join(', ')}
                     onChange={e => setTaskForm({ ...taskForm, images: e.target.value.split(',').map(s => s.trim()).filter(s => s !== '') })}
-                    className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-medium focus:ring-1 focus:ring-black outline-none h-20" 
-                    placeholder="https://exemplo.com/imagem1.jpg, https://exemplo.com/imagem2.png"
+                    className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-medium text-black dark:text-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none h-20" 
+                    placeholder="https://exemplo.com/imagem1.jpg"
                   />
                 </div>
 
-                <div className="pt-8 border-t border-neutral-100">
+                <div className="pt-8 border-t border-neutral-100 dark:border-white/10">
                   <button 
                     onClick={handleSaveTask}
-                    className="w-full py-4 bg-black text-white text-[10px] font-bold rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] transition-transform active:scale-[0.98]"
+                    className="w-full py-4 bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] transition-transform active:scale-[0.98]"
                   >
                     {taskForm.id ? 'Atualizar Registro' : 'Confirmar Envio'}
                   </button>
@@ -769,49 +769,49 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white w-full max-w-xl rounded-[40px] p-12 relative shadow-2xl"
+              className="bg-white dark:bg-[#121212] w-full max-w-xl rounded-[40px] p-12 relative shadow-2xl border border-black/5 dark:border-white/10"
             >
               <button 
                 onClick={() => setIsProjectModalOpen(false)}
-                className="absolute top-8 right-8 p-3 hover:bg-neutral-50 rounded-full transition-colors"
+                className="absolute top-8 right-8 p-3 hover:bg-neutral-50 dark:hover:bg-white/5 rounded-full transition-colors text-black dark:text-white"
               >
                 <X size={24} />
               </button>
 
               <header className="mb-12">
-                <nav className="text-[10px] font-bold text-[#5d5e66] tracking-widest uppercase mb-2">Opero / {projectForm.id ? 'Editar' : 'Novo'} Projeto</nav>
-                <h3 className="text-4xl font-extrabold tracking-tighter">{projectForm.id ? 'Refinar' : 'Lançar'} Iniciativa</h3>
+                <nav className="text-[10px] font-bold text-[#5d5e66] dark:text-white/40 tracking-widest uppercase mb-2">Opero / {projectForm.id ? 'Editar' : 'Novo'} Projeto</nav>
+                <h3 className="text-4xl font-extrabold tracking-tighter text-black dark:text-white">{projectForm.id ? 'Refinar' : 'Lançar'} Iniciativa</h3>
               </header>
 
               <div className="space-y-8">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Nome da Iniciativa</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Nome da Iniciativa</label>
                   <input 
                     type="text" 
                     value={projectForm.name}
                     onChange={e => setProjectForm({ ...projectForm, name: e.target.value })}
-                    className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-bold focus:ring-1 focus:ring-black outline-none" 
+                    className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-bold text-black dark:text-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none" 
                     placeholder="Ex: Expansão EMEA 2025"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Descrição Estratégica</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Descrição Estratégica</label>
                   <textarea 
                     value={projectForm.description}
                     onChange={e => setProjectForm({ ...projectForm, description: e.target.value })}
-                    className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-medium focus:ring-1 focus:ring-black outline-none h-24" 
+                    className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-medium text-black dark:text-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none h-24" 
                     placeholder="Descreva o objetivo fundamental deste projeto..."
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Categoria</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Categoria</label>
                     <select 
                       value={projectForm.type}
                       onChange={e => setProjectForm({ ...projectForm, type: e.target.value })}
-                      className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-bold outline-none"
+                      className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-bold text-black dark:text-white outline-none"
                     >
                       <option>INFRA</option>
                       <option>SECURITY</option>
@@ -822,11 +822,11 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Estado Inicial</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Estado Inicial</label>
                     <select 
                       value={projectForm.status}
                       onChange={e => setProjectForm({ ...projectForm, status: e.target.value })}
-                      className="w-full bg-neutral-50 border-none rounded-2xl p-4 text-sm font-bold outline-none"
+                      className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-bold text-black dark:text-white outline-none"
                     >
                       <option>Em Andamento</option>
                       <option>Planejamento</option>
@@ -837,7 +837,7 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Recrutar Membros</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Recrutar Membros</label>
                   <div className="flex flex-wrap gap-2">
                     {users.map(u => (
                       <button
@@ -851,8 +851,8 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                         className={cn(
                           "flex items-center gap-2 p-1.5 rounded-full border transition-all",
                           projectForm.members.includes(u.id) 
-                            ? "bg-black border-black text-white" 
-                            : "bg-white border-neutral-100 text-[#5d5e66]"
+                            ? "bg-black dark:bg-white border-black dark:border-white text-white dark:text-black" 
+                            : "bg-white dark:bg-white/5 border-neutral-100 dark:border-white/10 text-[#5d5e66] dark:text-white/40"
                         )}
                       >
                         <img src={u.avatar} className="w-6 h-6 rounded-full object-cover" alt="" />
@@ -862,11 +862,11 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-8 border-t border-neutral-100">
+                <div className="space-y-4 pt-8 border-t border-neutral-100 dark:border-white/10">
                   {saveError && (
-                    <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex items-center gap-3">
+                    <div className="bg-red-50 dark:bg-red-500/10 p-4 rounded-xl border border-red-100 dark:border-red-500/20 flex items-center gap-3">
                       <AlertCircle className="text-red-500 shrink-0" size={16} />
-                      <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest leading-normal">
+                      <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-widest leading-normal">
                         {saveError}
                       </p>
                     </div>
@@ -877,7 +877,7 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                     onClick={handleSaveProject}
                     disabled={isSaving}
                     className={cn(
-                      "w-full py-4 bg-black text-white text-[10px] font-bold rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] transition-transform active:scale-[0.98]",
+                      "w-full py-4 bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold rounded-2xl uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] transition-transform active:scale-[0.98]",
                       isSaving && "opacity-50 cursor-not-allowed scale-100"
                     )}
                   >
@@ -902,12 +902,12 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white w-full max-w-4xl h-[85vh] rounded-[40px] flex overflow-hidden shadow-2xl"
+              className="bg-white dark:bg-[#121212] w-full max-w-4xl h-[85vh] rounded-[40px] flex overflow-hidden shadow-2xl border border-black/5 dark:border-white/10"
             >
               {/* Left Column: Comments/Chat */}
-              <div className="w-[350px] border-r border-neutral-100 flex flex-col bg-[#fdfcff]">
-                <div className="p-8 border-b border-neutral-100">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">Feed de Colaboração</h4>
+              <div className="w-[350px] border-r border-neutral-100 dark:border-white/5 flex flex-col bg-[#fdfcff] dark:bg-white/[0.02]">
+                <div className="p-8 border-b border-neutral-100 dark:border-white/5">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Feed de Colaboração</h4>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
@@ -917,21 +917,21 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                       <div key={comment.id} className="flex gap-4">
                         <img src={user.avatar} className="w-8 h-8 rounded-full shrink-0 object-cover" alt="" />
                         <div>
-                          <p className="text-[10px] font-bold text-black mb-1">{user.name} <span className="opacity-30 ml-2">{comment.time}</span></p>
-                          <p className="text-xs text-[#5d5e66] leading-relaxed">{comment.text}</p>
+                          <p className="text-[10px] font-bold text-black dark:text-white mb-1">{user.name} <span className="opacity-30 dark:opacity-20 ml-2">{comment.time}</span></p>
+                          <p className="text-xs text-[#5d5e66] dark:text-white/40 leading-relaxed font-medium">{comment.text}</p>
                         </div>
                       </div>
                     );
                   })}
                   {(!selectedTask.comments || selectedTask.comments.length === 0) && (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20 text-center">
+                    <div className="h-full flex flex-col items-center justify-center opacity-20 dark:opacity-10 text-center text-black dark:text-white">
                       <MessageSquare size={32} className="mb-4" />
                       <p className="text-[10px] font-bold uppercase">Nenhum comentário</p>
                     </div>
                   )}
                 </div>
 
-                <div className="p-6 bg-white border-t border-neutral-100">
+                <div className="p-6 bg-white dark:bg-[#121212] border-t border-neutral-100 dark:border-white/5">
                   <div className="relative">
                     <input 
                       type="text" 
@@ -939,11 +939,11 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                       onChange={e => setCommentText(e.target.value)}
                       onKeyPress={e => e.key === 'Enter' && handleAddComment()}
                       placeholder="Adicionar nota..."
-                      className="w-full bg-neutral-50 rounded-xl py-3 pl-4 pr-12 text-sm focus:ring-1 focus:ring-black outline-none"
+                      className="w-full bg-neutral-50 dark:bg-white/5 rounded-xl py-3 pl-4 pr-12 text-sm text-black dark:text-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none"
                     />
                     <button 
                       onClick={handleAddComment}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-black hover:scale-110 transition-transform"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-black dark:text-white hover:scale-110 transition-transform"
                     >
                       <Send size={16} />
                     </button>
@@ -952,34 +952,34 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
               </div>
 
               {/* Right Column: Details & Images */}
-              <div className="flex-1 p-12 overflow-y-auto scrollbar-hide relative">
+              <div className="flex-1 p-12 overflow-y-auto scrollbar-hide relative text-black dark:text-white bg-white dark:bg-[#121212]">
                 <button 
                   onClick={() => setSelectedTask(null)}
-                  className="absolute top-8 right-8 p-3 hover:bg-neutral-50 rounded-full transition-colors"
+                  className="absolute top-8 right-8 p-3 hover:bg-neutral-50 dark:hover:bg-white/5 rounded-full transition-colors"
                 >
                   <X size={24} />
                 </button>
 
                 <header className="mb-10 pr-12">
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="bg-black text-white px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest italic">{selectedTask.priority}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66]">{selectedTask.project}</span>
+                    <span className="bg-black dark:bg-white text-white dark:text-black px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest italic">{selectedTask.priority}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">{selectedTask.project}</span>
                   </div>
-                  <h3 className="text-4xl font-extrabold tracking-tighter mb-4">{selectedTask.title}</h3>
+                  <h3 className="text-4xl font-extrabold tracking-tighter mb-4 text-black dark:text-white">{selectedTask.title}</h3>
                   
-                  <div className="flex items-center gap-8 py-6 border-y border-neutral-100">
+                  <div className="flex items-center gap-8 py-6 border-y border-neutral-100 dark:border-white/5 transition-colors">
                     <div className="space-y-1">
-                      <p className="text-[9px] font-bold uppercase text-[#5d5e66] tracking-widest">Responsáveis</p>
+                      <p className="text-[9px] font-bold uppercase text-[#5d5e66] dark:text-white/40 tracking-widest">Responsáveis</p>
                       <div className="flex -space-x-2">
                         {selectedTask.assignees.map(u => (
-                          <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" alt="" />
+                          <img key={u.id} src={u.avatar} className="w-8 h-8 rounded-full border-2 border-white dark:border-[#121212] object-cover shadow-sm" alt="" />
                         ))}
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[9px] font-bold uppercase text-[#5d5e66] tracking-widest">Entrega Estipulada</p>
-                      <div className="flex items-center gap-2 text-sm font-bold text-black">
-                        <Calendar size={14} /> {selectedTask.dueDate}
+                      <p className="text-[9px] font-bold uppercase text-[#5d5e66] dark:text-white/40 tracking-widest">Entrega Estipulada</p>
+                      <div className="flex items-center gap-2 text-sm font-bold">
+                        <Calendar size={14} className="text-[#5d5e66] dark:text-white/40" /> {selectedTask.dueDate}
                       </div>
                     </div>
                   </div>
@@ -987,27 +987,27 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
 
                 <section className="space-y-8">
                   <div className="space-y-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#5d5e66]">Imagens de Referência</h4>
+                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#5d5e66] dark:text-white/40">Imagens de Referência</h4>
                     <div className="grid grid-cols-2 gap-4">
                       {selectedTask.images?.map((img, i) => (
-                        <div key={i} className="aspect-video rounded-2xl overflow-hidden shadow-sm hover:scale-[1.02] transition-transform cursor-pointer">
+                        <div key={i} className="aspect-video rounded-2xl overflow-hidden shadow-sm hover:scale-[1.02] transition-transform cursor-pointer border border-black/5 dark:border-white/5">
                           <img src={img} className="w-full h-full object-cover" alt="" />
                         </div>
                       ))}
                       <button 
                         onClick={() => handleAddImage('https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=1000')}
-                        className="aspect-video rounded-2xl border-2 border-dashed border-neutral-100 flex flex-col items-center justify-center gap-2 hover:bg-neutral-50 transition-colors group"
+                        className="aspect-video rounded-2xl border-2 border-dashed border-neutral-100 dark:border-white/10 flex flex-col items-center justify-center gap-2 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors group"
                       >
-                        <Camera size={24} className="text-neutral-300 group-hover:text-black transition-colors" />
-                        <span className="text-[10px] font-bold uppercase text-neutral-400 group-hover:text-black">Anexar Captura</span>
+                        <Camera size={24} className="text-neutral-300 dark:text-white/10 group-hover:text-black dark:group-hover:text-white transition-colors" />
+                        <span className="text-[10px] font-bold uppercase text-neutral-400 group-hover:text-black dark:group-hover:text-white transition-colors">Anexar Captura</span>
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#5d5e66]">Descrição da Operação</h4>
-                    <p className="text-sm text-[#5d5e66] leading-relaxed font-medium">
-                      Otimização do cluster de microserviços focada em reduzir a latência de handshake nos hubs de Singapura e Londres. Requer auditoria dos logs de rede da última sprint.
+                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#5d5e66] dark:text-white/40">Descrição da Operação</h4>
+                    <p className="text-sm text-[#5d5e66] dark:text-white/60 leading-relaxed font-medium">
+                      {selectedTask.description || "Nenhuma descrição detalhada disponível para esta operação."}
                     </p>
                   </div>
                 </section>

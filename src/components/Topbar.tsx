@@ -31,19 +31,19 @@ export default function Topbar({
       <div className="flex items-center gap-4 flex-1 max-w-xl">
         <button 
           onClick={onToggleSidebar}
-          className="p-2 text-black/60 hover:text-black transition-colors lg:mr-2"
+          className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors lg:mr-2"
         >
           {isSidebarVisible ? <X size={20} /> : <Menu size={20} />}
         </button>
 
         <div className="relative w-full group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-black transition-colors" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={16} />
           <input 
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Pesquisar tarefas, membros ou projetos..."
-            className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-black focus:ring-1 focus:ring-black/20 transition-all placeholder:text-neutral-500 focus:bg-white/90"
+            className="w-full pl-10 pr-4 py-2 bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-lg text-sm text-black dark:text-white focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 transition-all placeholder:text-neutral-500 focus:bg-white/90 dark:focus:bg-black/90"
           />
         </div>
       </div>
@@ -54,7 +54,7 @@ export default function Topbar({
             onClick={() => setShowNotifications(!showNotifications)}
             className={cn(
               "p-2 transition-colors relative",
-              showNotifications ? "text-black" : "text-black/60 hover:text-black"
+              showNotifications ? "text-black dark:text-white" : "text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white"
             )}
           >
             <Bell size={18} />
@@ -74,33 +74,33 @@ export default function Topbar({
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 mt-4 w-80 bg-white rounded-2xl shadow-2xl border border-neutral-100 z-50 overflow-hidden"
+                  className="absolute right-0 mt-4 w-80 bg-white dark:bg-[#121212] rounded-2xl shadow-2xl border border-neutral-100 dark:border-white/10 z-50 overflow-hidden"
                 >
-                  <div className="p-4 border-b border-neutral-50 flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-[#5d5e66]">Notificações</h4>
-                    <span className="text-[10px] font-bold text-black bg-neutral-100 px-2 py-0.5 rounded-full">{activities.length}</span>
+                  <div className="p-4 border-b border-neutral-50 dark:border-white/5 flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-[#5d5e66] dark:text-white/40">Notificações</h4>
+                    <span className="text-[10px] font-bold text-black dark:text-white bg-neutral-100 dark:bg-white/10 px-2 py-0.5 rounded-full">{activities.length}</span>
                   </div>
                   <div className="max-h-[320px] overflow-y-auto">
                     {activities.length > 0 ? (
                       activities.map(act => (
-                        <div key={act.id} className="p-4 hover:bg-neutral-50 transition-colors border-b border-neutral-50 flex gap-3">
+                        <div key={act.id} className="p-4 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors border-b border-neutral-50 dark:border-white/5 flex gap-3">
                           <img src={act.user.avatar} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
                           <div>
-                            <p className="text-xs">
+                            <p className="text-xs text-black dark:text-white">
                               <span className="font-bold">{act.user.name}</span> {act.action} <span className="font-bold">{act.target}</span>
                             </p>
-                            <span className="text-[10px] text-neutral-400">{act.time}</span>
+                            <span className="text-[10px] text-neutral-400 dark:text-white/40">{act.time}</span>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="p-12 text-center">
-                        <Check className="mx-auto text-neutral-200 mb-2" size={32} />
+                        <Check className="mx-auto text-neutral-200 dark:text-white/10 mb-2" size={32} />
                         <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Tudo limpo!</p>
                       </div>
                     )}
                   </div>
-                  <button className="w-full py-3 text-[10px] font-bold text-[#5d5e66] uppercase tracking-widest hover:bg-neutral-50 transition-colors">
+                  <button className="w-full py-3 text-[10px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-widest hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
                     Ver Tudo
                   </button>
                 </motion.div>
@@ -109,7 +109,7 @@ export default function Topbar({
           </AnimatePresence>
         </div>
 
-        <button className="p-2 text-black/60 hover:text-black transition-colors">
+        <button className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors">
           <Grid size={18} />
         </button>
         <button 
@@ -121,7 +121,7 @@ export default function Topbar({
               logActivity('acionou', 'Ação Rápida', 'SISTEMA');
             }
           }}
-          className="bg-white text-black px-4 py-1.5 rounded-md text-sm font-bold hover:bg-neutral-200 transition-colors"
+          className="bg-white dark:bg-neutral-800 text-black dark:text-white px-4 py-1.5 rounded-md text-sm font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors border border-black/5 dark:border-white/10"
         >
           Ação Rápida
         </button>

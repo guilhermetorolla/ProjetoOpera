@@ -103,3 +103,22 @@ export interface Booking {
   endTime: string;
   title: string;
 }
+
+export interface Doc {
+  id: string;
+  title: string;
+  content: string;
+  type: 'doc' | 'sheet' | 'slide';
+  updatedAt: string;
+  authorId: string;
+  author?: User;
+  starred: boolean;
+  visibility: 'private' | 'shared' | 'workspace';
+}
+
+export interface DocumentShare {
+  id: string;
+  documentId: string;
+  userId: string;
+  permission: 'view' | 'edit';
+}

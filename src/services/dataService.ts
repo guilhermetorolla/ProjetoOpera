@@ -199,5 +199,20 @@ export const dataService = {
     });
     
     if (error) console.error('Erro ao logar atividade:', error);
+  },
+
+  async getUsers(): Promise<User[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*');
+    if (error) throw error;
+    
+    return (data || []).map(u => ({
+      id: u.id,
+      name: u.name,
+      avatar: u.avatar_url,
+      role: u.role,
+      email: u.email
+    }));
   }
 };
