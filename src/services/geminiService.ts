@@ -1,7 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 // Simple cache to prevent excessive calls
 const insightCache: Record<string, { data: any, timestamp: number }> = {};
 const CACHE_TTL = 1000 * 60 * 10; // Increased to 10 minutes
@@ -31,53 +27,35 @@ export const geminiService = {
       return insightCache[cacheKey].data;
     }
 
-    const prompt = `
-      Analise o seguinte estado do espaço de trabalho do Opero e forneça 3 insights estratégicos curtos.
-      Projetos: ${JSON.stringify(projects.map(p => ({ n: p.name, s: p.status, p: p.progress })))}
-      Tarefas: ${JSON.stringify(tasks.slice(0, 5).map(t => ({ ti: t.title, s: t.status })))}
-      
-      Regras:
-      1. Os insights devem ser ultra-curtos (máximo 12 palavras cada).
-      2. Foque em risco, produtividade ou prazos.
-      3. Use um tom executivo.
-      4. Retorne em formato JSON.
-    `;
-
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview", // Using standard flash instead of lite for better stability if lite is unstable
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                insight: { type: Type.STRING },
-                level: { type: Type.STRING }
-              },
-              required: ["title", "insight", "level"]
-            }
-          }
-        }
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projects, tasks })
       });
 
-      const parsed = JSON.parse(response.text || "[]");
-      insightCache[cacheKey] = { data: parsed, timestamp: now };
-      lastQuotaErrorTime = 0; // Reset on success
-      return parsed;
-    } catch (error: any) {
-      const errorStr = JSON.stringify(error);
-      console.error("Erro na análise Gemini:", errorStr);
+      if (!response.ok) {
+        if (response.status === 429) {
+          lastQuotaErrorTime = Date.now();
+          return { error: "QUOTA_EXCEEDED", message: "Limite de taxa atingido." };
+        }
+        throw new Error("Failed to fetch from /api/analyze");
+      }
+
+      const parsed = await response.json();
       
-      // Check for quota error in various formats
-      if (errorStr.includes("429") || errorStr.includes("RESOURCE_EXHAUSTED") || errorStr.includes("quota")) {
+      // If the backend hits a quota limit or errors out natively
+      if (parsed.error === 'QUOTA_EXCEEDED') {
         lastQuotaErrorTime = Date.now();
-        return { error: "QUOTA_EXCEEDED", message: "Limite de taxa atingido." };
+      } else {
+        insightCache[cacheKey] = { data: parsed, timestamp: now };
+        lastQuotaErrorTime = 0; // Reset on success
       }
       
+      return parsed;
+
+    } catch (error: any) {
+      console.error("Erro na análise Gemini via backend:", error);
       return [];
     }
   }

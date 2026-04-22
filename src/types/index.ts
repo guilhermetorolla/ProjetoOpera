@@ -65,6 +65,8 @@ export interface Project {
   cftvData?: {
     points: CFTVPoint[];
     links: CFTVLink[];
+    prices?: Record<string, number>;
+    extraItems?: any[];
   };
   milestones?: Milestone[];
 }

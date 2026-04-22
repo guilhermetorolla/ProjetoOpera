@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { 
   Trash2, Link as LinkIcon, MousePointer2, 
   Database, Search, ScanLine, Box, Globe, FileText,
-  Cctv, Video, TowerControl, Server
+  Cctv, Video, TowerControl, Server, Calculator, DollarSign, PlusCircle, Receipt, X
 } from 'lucide-react';
 import { Project, CFTVPoint, CFTVLink } from '../types';
 import { cn } from '../lib/utils';
@@ -11,10 +11,8 @@ import { MapContainer, TileLayer, useMap, useMapEvents, Polyline, Polygon, Marke
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet image paths
 L.Icon.Default.imagePath = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/';
 
-// Cores Neumórficas Pasteis Mapeadas da Referência (Claymorphism / Fofo)
 const equipmentTypes = [
   { id: 'camera_dome', label: 'Câmera Dome', icon: Cctv, color: 'bg-[#98D8D8] text-[#1E6B6B]', group: 'Câmeras' },
   { id: 'camera_bullet', label: 'Câmera Bullet', icon: Video, color: 'bg-[#A3D9A5] text-[#2D7330]', group: 'Câmeras' },
@@ -82,14 +80,12 @@ const getCustomIcon = (pointType: string, label: string, isSelected: boolean) =>
   return icon;
 };
 
-// Expose Map instance safely Component
 const MapInstanceExporter = React.memo(({ setMapInstance }: { setMapInstance: (map: L.Map) => void }) => {
   const map = useMap();
   useEffect(() => { setMapInstance(map); }, [map, setMapInstance]);
   return null;
 });
 
-// Manipulador mestre do mapa que cuida de criar as "Curvas" e "Esquinas" nos fios customizados!
 const MapInteractionHandler = ({ 
   mode, selectedPointId, setSelectedPointId, setPendingPath, setMousePos 
 }: { 
@@ -100,40 +96,45 @@ const MapInteractionHandler = ({
   useMapEvents({
     click(e) {
       if (mode === 'cable' && selectedPointId) {
-         // O usuário está arrastando um cabo e clicou num "poste imaginário" ou "esquina" da rua
          setPendingPath(prev => [...prev, [e.latlng.lat, e.latlng.lng]]);
       } else {
-         // Clique normal no chão sem modo cabo, limpa a seleção das câmeras
          setSelectedPointId(null);
          setPendingPath([]);
       }
     },
     mousemove(e) {
-      if (mode === 'cable' && selectedPointId) {
-         // Desenhar linha de previsão do mouse
-         setMousePos([e.latlng.lat, e.latlng.lng]);
-      } else {
-         setMousePos(null);
-      }
+      if (mode === 'cable' && selectedPointId) setMousePos([e.latlng.lat, e.latlng.lng]);
+      else setMousePos(null);
     }
   });
   return null;
 };
 
+interface ExtraItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 interface CFTVMappingProps {
   project: Project;
-  onUpdate: (data: { points: CFTVPoint[], links: CFTVLink[] }) => void;
+  onUpdate: (data: any) => void;
 }
 
 export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
   const [points, setPoints] = useState<CFTVPoint[]>(project.cftvData?.points || []);
   const [links, setLinks] = useState<CFTVLink[]>(project.cftvData?.links || []);
   
+  // Orçamento (Custos)
+  const [prices, setPrices] = useState<Record<string, number>>(project.cftvData?.prices || {});
+  const [extraItems, setExtraItems] = useState<ExtraItem[]>(project.cftvData?.extraItems || []);
+  const [rightTab, setRightTab] = useState<'bim' | 'budget'>('bim');
+
   const [mode, setMode] = useState<'move' | 'cable'>('move');
   const [selectedCableType, setSelectedCableType] = useState<'utp' | 'fiber' | 'power'>('utp');
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   
-  // Caminhos customizados
   const [pendingPath, setPendingPath] = useState<[number, number][]>([]);
   const [mousePos, setMousePos] = useState<[number, number] | null>(null);
   
@@ -148,11 +149,10 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
   []);
 
   useEffect(() => {
-    const timer = setTimeout(() => onUpdate({ points, links }), 500);
+    const timer = setTimeout(() => onUpdate({ points, links, prices, extraItems }), 500);
     return () => clearTimeout(timer);
-  }, [points, links, onUpdate]);
+  }, [points, links, prices, extraItems, onUpdate]);
 
-  // Capturar ESC para cancelar linha do Cabo
   const cancelDrawing = useCallback(() => {
     if (mode === 'cable' && selectedPointId) {
        setSelectedPointId(null);
@@ -167,7 +167,6 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [cancelDrawing]);
-
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -212,8 +211,10 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
     }
   };
 
-  const calculateTotalCable = useCallback(() => {
-    let total = 0;
+  const getCableLengths = useCallback(() => {
+    const lengths: Record<string, number> = {};
+    cableTypes.forEach(c => lengths[c.id] = 0);
+
     if (mapInstance) {
       links.forEach(l => {
         const p1 = points.find(p => p.id === l.fromId);
@@ -221,13 +222,38 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
         if (p1 && p2) {
            const pts: [number, number][] = [[p1.y, p1.x], ...(l.path || []), [p2.y, p2.x]];
            for(let i=0; i < pts.length - 1; i++){
-               total += mapInstance.distance(pts[i], pts[i+1]);
+               lengths[l.type] = (lengths[l.type] || 0) + mapInstance.distance(pts[i], pts[i+1]);
            }
         }
       });
     }
-    return total.toFixed(1);
+    return lengths;
   }, [links, points, mapInstance]);
+
+  const calculateTotalCable = useCallback(() => {
+    const lengths = getCableLengths();
+    return Object.values(lengths).reduce((a,b) => a+b, 0).toFixed(1);
+  }, [getCableLengths]);
+
+  const computeGrandTotal = useCallback(() => {
+     let total = 0;
+     equipmentTypes.forEach(eq => {
+        const count = points.filter(p => p.type === eq.id).length;
+        total += count * (prices[eq.id] || 0);
+     });
+     const cableMeters = getCableLengths();
+     cableTypes.forEach(c => {
+        total += Math.round(cableMeters[c.id] || 0) * (prices[c.id] || 0);
+     });
+     extraItems.forEach(item => {
+        total += item.quantity * item.unitPrice;
+     });
+     return total;
+  }, [points, getCableLengths, prices, extraItems]);
+
+  const formatCurrency = (val: number) => {
+     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  };
 
   const deleteSelected = useCallback(() => {
     if (!selectedPointId) return;
@@ -250,23 +276,102 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
                fromId: selectedPointId,
                toId: pointId,
                type: selectedCableType as any,
-               path: pendingPath // ADICIONA AS CURVAS E VÉRTICES DA RUA!
+               path: pendingPath
              }]);
            }
          }
-         // Limpa após conectar (Ou clicar em si mesmo)
          setSelectedPointId(null);
          setPendingPath([]);
          setMousePos(null);
       } else {
-         // Começa a puxar o cabo daqui
          setSelectedPointId(pointId);
          setPendingPath([]);
       }
     } else {
       setSelectedPointId(pointId);
+      setRightTab('bim'); // Retorna pra BIM se clicar em algo pra ver configs
     }
   }, [mode, selectedPointId, selectedCableType, links, pendingPath]);
+
+  // Modificado export PDF para incluir custos
+  const exportPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF();
+      pdf.setFontSize(22);
+      pdf.text(`BOM e Orçamento: ${project.name}`, 20, 20);
+      
+      let y = 35;
+      pdf.setFontSize(14);
+      pdf.text(`1. Equipamentos e Infraestrutura`, 20, y);
+      y += 10;
+      
+      pdf.setFontSize(11);
+      const counts: Record<string, number> = {};
+      points.forEach(p => counts[p.type] = (counts[p.type] || 0) + 1);
+      
+      let totalEq = 0;
+      Object.entries(counts).forEach(([type, count]) => {
+        const eqName = equipmentTypes.find(e => e.id === type)?.label;
+        const unPrice = prices[type] || 0;
+        const sub = count * unPrice;
+        totalEq += sub;
+        pdf.text(`- ${count}x ${eqName}`, 25, y);
+        pdf.text(`R$ ${unPrice.toFixed(2)} un.`, 130, y);
+        pdf.text(`Sub: R$ ${sub.toFixed(2)}`, 170, y);
+        y += 8;
+      });
+
+      y += 5;
+      pdf.setFontSize(14);
+      pdf.text(`2. Cabeamento Estimado (+15% sugerido)`, 20, y);
+      y += 10;
+
+      pdf.setFontSize(11);
+      const cableMeters = getCableLengths();
+      cableTypes.forEach(c => {
+         const m = Math.round(cableMeters[c.id] || 0);
+         if (m > 0) {
+           const unPrice = prices[c.id] || 0;
+           const sub = m * unPrice;
+           pdf.text(`- ${m}m ${c.label}`, 25, y);
+           pdf.text(`R$ ${unPrice.toFixed(2)} /m`, 130, y);
+           pdf.text(`Sub: R$ ${sub.toFixed(2)}`, 170, y);
+           y += 8;
+         }
+      });
+
+      if (extraItems.length > 0) {
+        y += 5;
+        pdf.setFontSize(14);
+        pdf.text(`3. Materiais Adicionais (Externos)`, 20, y);
+        y += 10;
+
+        pdf.setFontSize(11);
+        extraItems.forEach(e => {
+           const sub = e.quantity * e.unitPrice;
+           pdf.text(`- ${e.quantity}x ${e.name}`, 25, y);
+           pdf.text(`R$ ${e.unitPrice.toFixed(2)} un.`, 130, y);
+           pdf.text(`Sub: R$ ${sub.toFixed(2)}`, 170, y);
+           y += 8;
+        });
+      }
+
+      y += 15;
+      pdf.setFontSize(16);
+      pdf.setTextColor(20, 100, 20); // Verde suave
+      pdf.text(`Total Geral: ${formatCurrency(computeGrandTotal())}`, 20, y);
+
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(9);
+      pdf.text(`Exportado via Opero CAD. Valores listados como orçamento simulado prévio.`, 20, y + 20);
+
+      pdf.save(`orcamento_${project.id}_cftv.pdf`);
+    } catch(err) {
+      console.error(err);
+      alert("Erro ao exportar PDF.");
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-neutral-100 dark:bg-[#121212] overflow-hidden select-none relative z-10 rounded-2xl shadow-xl">
@@ -327,8 +432,8 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
              <ScanLine size={14} /> Mostrar F.O.V
            </button>
            
-           <button title="Você precisa de uma planta de captura para isso" className="flex px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all gap-2 shadow-lg items-center opacity-80 cursor-not-allowed">
-             <FileText size={14} /> PDF Indisponível
+           <button onClick={exportPDF} className="flex px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all gap-2 shadow-lg items-center">
+             <FileText size={14} /> Exportar Orçamento
            </button>
         </div>
       </div>
@@ -379,7 +484,6 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
           onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
           onDrop={handleDrop}
         >
-          {/* Cabo Assistivo Tooltip Moderno */}
           {mode === 'cable' && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white text-[11px] font-black uppercase px-6 py-2.5 rounded-xl shadow-2xl z-[9999] pointer-events-none animate-in slide-in-from-top-4 border border-white/10 flex items-center gap-4">
               <div className="flex bg-blue-600 rounded-full w-6 h-6 items-center justify-center -ml-3 shadow"><LinkIcon size={12} className="text-white"/></div>
@@ -394,13 +498,7 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
             </div>
           )}
 
-          <MapContainer 
-            center={initialCenter} 
-            zoom={18} 
-            maxZoom={22}
-            style={{ width: '100%', height: '100%' }}
-            zoomControl={false}
-          >
+          <MapContainer center={initialCenter} zoom={18} maxZoom={22} style={{ width: '100%', height: '100%' }} zoomControl={false}>
             {mapType === 'satellite' ? (
               <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={22} />
             ) : (
@@ -416,7 +514,7 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
                setMousePos={setMousePos} 
             />
 
-            {/* Linha do Cabo "Vivo" (Enquanto Desenha) */}
+            {/* Linha do Cabo "Vivo" */}
             {mode === 'cable' && selectedPointId && (() => {
                const startPt = points.find(p => p.id === selectedPointId);
                if (!startPt) return null;
@@ -427,20 +525,11 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
                const pathColor = cableTypes.find(c => c.id === selectedCableType)?.code || '#fff';
 
                return (
-                  <Polyline
-                    positions={previewPts}
-                    color={pathColor}
-                    weight={3}
-                    dashArray="6 8" /* Pontilhado para mostrar que está desenhando */
-                    opacity={0.6}
-                    className="pointer-events-none"
-                    lineCap="round"
-                    lineJoin="round"
-                  />
+                  <Polyline positions={previewPts} color={pathColor} weight={3} dashArray="6 8" opacity={0.6} className="pointer-events-none" lineCap="round" lineJoin="round" />
                );
             })()}
 
-            {/* Renderização de Cabos Finalizados (SVG Paths) */}
+            {/* Renderização de Cabos Finalizados */}
             {links.map(link => {
               const from = points.find(p => p.id === link.fromId);
               const to = points.find(p => p.id === link.toId);
@@ -461,14 +550,7 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
               
               return (
                 <Polyline 
-                  key={link.id} 
-                  positions={pts} 
-                  color={pathColor} 
-                  weight={isFiber ? 4 : 5} 
-                  dashArray={isFiber ? "2, 12" : undefined}
-                  lineCap="round"
-                  lineJoin="round"
-                  opacity={0.8}
+                  key={link.id} positions={pts} color={pathColor} weight={isFiber ? 4 : 5} dashArray={isFiber ? "2, 12" : undefined} lineCap="round" lineJoin="round" opacity={0.8}
                 >
                   <Tooltip permanent direction="center" className="bg-white/90 backdrop-blur-md text-black font-black text-[10px] border border-black/5 shadow-xl px-2 py-1 rounded-lg pointer-events-none">
                      {distMeters}m
@@ -485,30 +567,17 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
               const e2 = destinationPoint(p.y, p.x, radiusMeters, angle + 22);
               
               return (
-                <Polygon 
-                   key={`fov-${p.id}`}
-                   positions={[[p.y, p.x], e1, e2]}
-                   color="rgba(255,255,255,0)"
-                   fillColor="#3b82f6"
-                   fillOpacity={0.25}
-                   weight={0}
-                   className="pointer-events-none mix-blend-color-burn dark:mix-blend-screen"
-                />
+                <Polygon key={`fov-${p.id}`} positions={[[p.y, p.x], e1, e2]} color="rgba(255,255,255,0)" fillColor="#3b82f6" fillOpacity={0.25} weight={0} className="pointer-events-none mix-blend-color-burn dark:mix-blend-screen" />
               );
             })}
 
             {/* Marcadores 3D Soft usando cache HTML */}
             {points.map(point => (
                <Marker 
-                 key={point.id}
-                 position={[point.y, point.x]}
-                 icon={getCustomIcon(point.type, point.label, selectedPointId === point.id)}
-                 draggable={mode === 'move'}
+                 key={point.id} position={[point.y, point.x]} icon={getCustomIcon(point.type, point.label, selectedPointId === point.id)} draggable={mode === 'move'}
                  eventHandlers={{
                     click: () => handleMarkerClick(point.id),
-                    dragstart: () => {
-                       if (mode !== 'cable') setSelectedPointId(point.id);
-                    },
+                    dragstart: () => { if (mode !== 'cable') setSelectedPointId(point.id); setRightTab('bim'); },
                     dragend: (e) => {
                        const pos = e.target.getLatLng();
                        setPoints(prev => prev.map(p => p.id === point.id ? { ...p, x: pos.lng, y: pos.lat } : p));
@@ -519,14 +588,24 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
           </MapContainer>
         </div>
 
-        {/* Right Side: Propreties */}
-        <div className="w-64 bg-white dark:bg-[#18181A] border-l border-black/5 dark:border-white/5 flex flex-col z-20">
-          <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-blue-50/50 dark:bg-white/5">
-            <h3 className="text-[11px] font-black uppercase tracking-widest text-blue-900 dark:text-blue-300">BIM Engine</h3>
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+        {/* Right Side: Propreties / Budget Tabs */}
+        <div className="w-[320px] bg-white dark:bg-[#18181A] border-l border-black/5 dark:border-white/5 flex flex-col z-20 transition-all">
+          <div className="flex border-b border-black/5 dark:border-white/5 bg-neutral-50/50 dark:bg-white/5">
+            <button 
+              onClick={() => { setRightTab('bim'); setSelectedPointId(null); }}
+              className={cn("flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all  flex justify-center items-center gap-2", rightTab === 'bim' && !selectedPointId ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-white dark:bg-white/5 shadow-sm" : "text-black/40 dark:text-white/40 hover:bg-white/50")}
+            >
+              <Database size={14} /> Inventário
+            </button>
+            <button 
+              onClick={() => { setRightTab('budget'); setSelectedPointId(null); }}
+              className={cn("flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all  flex justify-center items-center gap-2", rightTab === 'budget' && !selectedPointId ? "text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600 bg-white dark:bg-white/5 shadow-sm" : "text-black/40 dark:text-white/40 hover:bg-white/50")}
+            >
+              <Calculator size={14} /> Custos
+            </button>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-5 space-y-6">
+          <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {selectedPointId && mode !== 'cable' ? (
               <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
                 <div className="flex items-center justify-between pb-3 border-b border-black/5 dark:border-white/5">
@@ -550,7 +629,6 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
                     {p.type.includes('camera') && (
                       <div className="space-y-4 pt-2">
                         <div className="bg-neutral-50 dark:bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5 space-y-2 relative overflow-hidden">
-                          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-full blur-xl"></div>
                           <label className="text-[10px] uppercase font-black opacity-60">Raio de Visão</label>
                           <input 
                             type="range" min="2" max="150" 
@@ -575,35 +653,161 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : rightTab === 'bim' ? (
               <div className="space-y-8 animate-in fade-in">
                 <div>
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/50 mb-3 ml-1">Consumo de TI</h4>
+                  <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/50 mb-3 ml-1"><Box size={14}/> Consumo Atual</h4>
                   <ul className="space-y-2">
                     {equipmentTypes.map(eq => {
                       const count = points.filter(p => p.type === eq.id).length;
                       if (count === 0) return null;
                       return (
-                        <li key={eq.id} className="flex justify-between items-center text-xs dark:text-white font-medium bg-white dark:bg-[#1A1A1D] p-2.5 rounded-xl border border-black/5 dark:border-white/5 shadow-[2px_2px_8px_rgba(0,0,0,0.02)] transition-all hover:scale-105">
+                        <li key={eq.id} className="flex justify-between items-center text-xs dark:text-white font-medium bg-white dark:bg-[#1A1A1D] p-3 rounded-xl border border-black/5 dark:border-white/5 shadow-sm transition-all hover:scale-[1.02]">
                           <span className="flex items-center gap-2 font-bold opacity-80"><eq.icon size={14} className="opacity-50"/> {eq.label}</span>
-                          <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 w-6 h-6 flex items-center justify-center rounded-full font-black text-[10px]">{count}</span>
+                          <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 w-7 h-7 flex items-center justify-center rounded-lg font-black">{count}</span>
                         </li>
                       );
                     })}
                   </ul>
-                  {points.length === 0 && <div className="text-center p-6 border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl"><p className="text-[10px] text-black/40 dark:text-white/40 uppercase font-black">Nenhum ativo implantado.</p></div>}
+                  {points.length === 0 && <div className="text-center p-6 border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl"><p className="text-[10px] text-black/40 dark:text-white/40 uppercase font-black">Planta vazia.</p></div>}
                 </div>
 
                 <div>
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/50 mb-3 ml-1">Relatório</h4>
-                  <div className="p-5 bg-black dark:bg-neutral-900 rounded-2xl shadow-xl border-t border-white/10 relative overflow-hidden transition-all hover:shadow-[0_10px_30px_rgba(59,130,246,0.3)] group cursor-pointer hover:-translate-y-1">
-                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-500/40 transition-colors"></div>
-                    <p className="text-[10px] font-black uppercase text-white/50 mb-1 z-10 relative">Cabeamento Total</p>
+                  <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/50 mb-3 ml-1"><LinkIcon size={14}/> Medição Total</h4>
+                  <div className="p-5 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-xl relative overflow-hidden group">
+                    <p className="text-[10px] font-black uppercase text-blue-200 mb-1 z-10 relative">Cabeamento Requerido</p>
                     <p className="text-3xl font-black tracking-tighter text-white z-10 relative">{calculateTotalCable()}m</p>
-                    <p className="text-[9px] uppercase font-bold text-white/40 mt-4 leading-tight z-10 relative border-t border-white/10 pt-2">
-                       Calculado incluindo {links.reduce((acc, l) => acc + (l.path?.length || 0), 0)} vértices geográficos da rua. ABNT: +15% de margem no corte.
+                    <p className="text-[9px] uppercase font-bold text-blue-200/50 mt-4 leading-tight z-10 relative border-t border-blue-500/50 pt-2">
+                       Baseado em vértices geográficos da rua ({links.reduce((acc, l) => acc + (l.path?.length || 0), 0)} Esquinas).
                     </p>
                   </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6 animate-in fade-in">
+                {/* BUDGET TAB */}
+                <div className="p-5 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-inner text-center">
+                    <p className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 mb-1 flex items-center justify-center gap-1"><Receipt size={14}/> Valor Global do Projeto</p>
+                    <p className="text-3xl font-black tracking-tighter text-emerald-700 dark:text-emerald-300">{formatCurrency(computeGrandTotal())}</p>
+                </div>
+                
+                <div className="space-y-6">
+                   <div>
+                     <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40 dark:text-white/40 mb-3 border-b border-black/5 dark:border-white/5 pb-2">Preços: Equipamentos</h4>
+                     <div className="space-y-3">
+                       {equipmentTypes.map(eq => {
+                         const count = points.filter(p => p.type === eq.id).length;
+                         if (count === 0) return null;
+                         const sub = count * (prices[eq.id] || 0);
+                         return (
+                           <div key={eq.id} className="bg-white dark:bg-[#1A1A1D] p-3 rounded-xl border border-black/5 dark:border-white/5 shadow-sm space-y-2">
+                              <div className="flex justify-between items-center text-[11px] font-bold">
+                                 <span className="flex items-center gap-1.5 opacity-80"><eq.icon size={12} className="opacity-50"/> {count}x {eq.label}</span>
+                                 <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(sub)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-black/50 dark:text-white/50 w-16">Valor/Un.</span>
+                                <div className="relative flex-1">
+                                  <DollarSign size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40" />
+                                  <input 
+                                     type="number" step="0.01" min="0" placeholder="0.00"
+                                     value={prices[eq.id] || ''}
+                                     onChange={(e) => setPrices(prev => ({...prev, [eq.id]: parseFloat(e.target.value) || 0}))}
+                                     className="w-full bg-neutral-100 dark:bg-black/50 rounded-md pl-7 pr-2 py-1.5 text-xs text-black dark:text-white font-bold outline-none focus:ring-1 focus:ring-emerald-500"
+                                  />
+                                </div>
+                              </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                     {points.length === 0 && <p className="text-[10px] font-bold text-black/30 dark:text-white/30 italic">Adicione ativos ao mapa...</p>}
+                   </div>
+
+                   <div>
+                     <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40 dark:text-white/40 mb-3 border-b border-black/5 dark:border-white/5 pb-2">Preços: Cabos</h4>
+                     <div className="space-y-3">
+                       {cableTypes.map(c => {
+                         const cableMeters = getCableLengths();
+                         const meters = Math.round(cableMeters[c.id] || 0);
+                         if (meters === 0) return null;
+                         const sub = meters * (prices[c.id] || 0);
+                         return (
+                           <div key={c.id} className="bg-white dark:bg-[#1A1A1D] p-3 rounded-xl border border-black/5 dark:border-white/5 shadow-sm space-y-2">
+                              <div className="flex justify-between items-center text-[11px] font-bold">
+                                 <span className="flex items-center gap-1.5 opacity-80"><LinkIcon size={12} className="opacity-50"/> {meters}m - {c.label}</span>
+                                 <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(sub)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-black/50 dark:text-white/50 w-16">Valor/Metro</span>
+                                <div className="relative flex-1">
+                                  <DollarSign size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40" />
+                                  <input 
+                                     type="number" step="0.01" min="0" placeholder="0.00"
+                                     value={prices[c.id] || ''}
+                                     onChange={(e) => setPrices(prev => ({...prev, [c.id]: parseFloat(e.target.value) || 0}))}
+                                     className="w-full bg-neutral-100 dark:bg-black/50 rounded-md pl-7 pr-2 py-1.5 text-xs text-black dark:text-white font-bold outline-none focus:ring-1 focus:ring-emerald-500"
+                                  />
+                                </div>
+                              </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   </div>
+
+                   <div>
+                     <div className="flex justify-between items-center mb-3 border-b border-black/5 dark:border-white/5 pb-2">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40 dark:text-white/40">Materiais Adicionais</h4>
+                        <button 
+                           onClick={() => setExtraItems(p => [...p, { id: Date.now().toString(), name: 'Item Extra', quantity: 1, unitPrice: 0 }])}
+                           className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded"
+                        >
+                          <PlusCircle size={10} /> ADD
+                        </button>
+                     </div>
+                     <div className="space-y-3">
+                       {extraItems.map((ex, idx) => (
+                           <div key={ex.id} className="bg-white dark:bg-[#1A1A1D] p-3 rounded-xl border border-black/5 dark:border-white/5 shadow-sm space-y-2 relative group flex flex-col">
+                              <button 
+                                 onClick={() => setExtraItems(p => p.filter(i => i.id !== ex.id))}
+                                 className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 hover:scale-110 transition-all shadow"
+                              >
+                                <X size={10} strokeWidth={3}/>
+                              </button>
+                              
+                              <input 
+                                type="text" placeholder="Nome do Material" value={ex.name}
+                                onChange={(e) => setExtraItems(p => p.map(i => i.id === ex.id ? {...i, name: e.target.value} : i))}
+                                className="w-full bg-neutral-100 dark:bg-black/50 rounded-md px-2 py-1.5 text-xs text-black dark:text-white font-bold outline-none focus:ring-1 focus:ring-emerald-500"
+                              />
+
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 relative">
+                                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] font-black text-black/40 dark:text-white/40">QNT</span>
+                                  <input 
+                                     type="number" min="1" value={ex.quantity}
+                                     onChange={(e) => setExtraItems(p => p.map(i => i.id === ex.id ? {...i, quantity: parseInt(e.target.value)||1} : i))}
+                                     className="w-full bg-neutral-100 dark:bg-black/50 rounded-md pl-8 pr-2 py-1.5 text-xs text-black dark:text-white font-bold outline-none focus:ring-1 focus:ring-emerald-500"
+                                  />
+                                </div>
+                                <div className="flex-1 relative">
+                                  <DollarSign size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40" />
+                                  <input 
+                                     type="number" step="0.01" min="0" placeholder="0.00" value={ex.unitPrice || ''}
+                                     onChange={(e) => setExtraItems(p => p.map(i => i.id === ex.id ? {...i, unitPrice: parseFloat(e.target.value)||0} : i))}
+                                     className="w-full bg-neutral-100 dark:bg-black/50 rounded-md pl-6 pr-2 py-1.5 text-xs text-black dark:text-white font-bold outline-none focus:ring-1 focus:ring-emerald-500"
+                                  />
+                                </div>
+                              </div>
+                              <p className="text-right text-[10px] font-black text-emerald-600 dark:text-emerald-400 border-t border-black/5 dark:border-white/5 pt-1 mt-1">
+                                Sub: {formatCurrency(ex.quantity * ex.unitPrice)}
+                              </p>
+                           </div>
+                       ))}
+                       {extraItems.length === 0 && <p className="text-[9px] font-bold text-black/30 dark:text-white/30 italic text-center">Nenhum custo externo adicionado (Ex: Passagens, Mão de obra).</p>}
+                     </div>
+                   </div>
                 </div>
               </div>
             )}
