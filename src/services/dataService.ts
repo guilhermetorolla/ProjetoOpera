@@ -15,6 +15,7 @@ export const dataService = {
       burnRate: p.burn_rate,
       riskProfile: p.risk_profile,
       cftvData: p.cftv_data,
+      networkData: p.network_data || p.cftv_data?.networkDataFallback,
       qualityData: p.quality_data || p.cftv_data?.qualityDataFallback,
       complianceData: p.compliance_data || p.cftv_data?.complianceDataFallback
     }));
@@ -78,6 +79,7 @@ export const dataService = {
       progress: updates.progress,
       risk_profile: updates.riskProfile,
       cftv_data: updates.cftvData,
+      network_data: updates.networkData,
       quality_data: updates.qualityData,
       compliance_data: updates.complianceData
     };
@@ -89,16 +91,18 @@ export const dataService = {
 
     if (error) {
       // PGRST204 = Column not found. Or PGRST200 or similar message checks
-      if (error.code === 'PGRST204' || error.message?.includes('quality_data') || error.message?.includes('compliance_data') || error.code === '42703') {
-         console.warn("dataService: 'quality_data' or 'compliance_data' column might be missing. Using JSONB fallback inside 'cftv_data'.");
+      if (error.code === 'PGRST204' || error.message?.includes('quality_data') || error.message?.includes('compliance_data') || error.message?.includes('network_data') || error.code === '42703') {
+         console.warn("dataService: Some columns might be missing. Using JSONB fallback inside 'cftv_data'.");
          
          const { data: current } = await supabase.from('projects').select('cftv_data').eq('id', id).single();
          const cftvData = current?.cftv_data || {};
          if (updates.qualityData !== undefined) cftvData.qualityDataFallback = updates.qualityData;
          if (updates.complianceData !== undefined) cftvData.complianceDataFallback = updates.complianceData;
+         if (updates.networkData !== undefined) cftvData.networkDataFallback = updates.networkData;
          
          delete payload.quality_data;
          delete payload.compliance_data;
+         delete payload.network_data;
          payload.cftv_data = cftvData;
 
          const { error: fallbackError } = await supabase.from('projects').update(payload).eq('id', id);

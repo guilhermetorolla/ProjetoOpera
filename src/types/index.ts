@@ -70,6 +70,12 @@ export interface Project {
     prices?: Record<string, number>;
     extraItems?: any[];
   };
+  networkData?: {
+    points: CFTVPoint[];
+    links: CFTVLink[];
+    prices?: Record<string, number>;
+    extraItems?: any[];
+  };
   milestones?: Milestone[];
   qualityData?: any;
   complianceData?: {

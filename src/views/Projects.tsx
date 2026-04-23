@@ -32,6 +32,7 @@ import { Status, Project, Task, Priority, User, Comment } from '../types';
 import CFTVMapping from '../components/CFTVMapping';
 import SaaSReleaseLog from '../components/SaaSReleaseLog';
 import ComplianceTracker from '../components/ComplianceTracker';
+import NetworkMapping from '../components/NetworkMapping';
 
 const columns: { id: Status; label: string; color: string; icon: any }[] = [
   { id: 'Pendente', label: 'A Fazer', color: '#f59e0b', icon: Clock },
@@ -252,7 +253,8 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
           riskProfile: [{ label: 'Novo', level: 'low' }],
           progress: 0,
           burnRate: 'Estável',
-          cftvData: projectForm.type === 'CFTV' ? { points: [], links: [] } : undefined
+          cftvData: projectForm.type === 'CFTV' ? { points: [], links: [] } : undefined,
+          networkData: projectForm.type === 'REDES' ? { points: [], links: [] } : undefined
         });
 
         // Automatização para SaaS: Adiciona um marco inicial de liberação
@@ -657,6 +659,29 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                   </div>
                 )}
 
+                {selectedProject?.type === 'REDES' && (
+                  <div className="flex bg-neutral-100 dark:bg-white/10 p-1 rounded-xl gap-1">
+                    <button 
+                      onClick={() => setViewMode('board')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        viewMode === 'board' ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm" : "text-neutral-400 dark:text-white/20 hover:text-black dark:hover:text-white"
+                      )}
+                    >
+                      <LayoutGrid size={14} /> Board
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('map')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        viewMode === 'map' ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm" : "text-neutral-400 dark:text-white/20 hover:text-black dark:hover:text-white"
+                      )}
+                    >
+                      <MapIcon size={14} /> Projeto de Redes
+                    </button>
+                  </div>
+                )}
+
                 {selectedProject?.type === 'SAAS' && (
                   <div className="flex bg-neutral-100 dark:bg-white/10 p-1 rounded-xl gap-1">
                     <button 
@@ -800,20 +825,37 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
               </div>
             ) : viewMode === 'map' && selectedProject ? (
               <div className="absolute inset-0">
-                <CFTVMapping 
-                  project={selectedProject} 
-                  onUpdate={async (data) => {
-                    try {
-                      await dataService.updateProject(selectedProject.id, {
-                        ...selectedProject,
-                        cftvData: data
-                      });
-                      await refreshData();
-                    } catch (e) {
-                      console.error("Failed to update CFTV data:", e);
-                    }
-                  }}
-                />
+                {selectedProject.type === 'CFTV' ? (
+                  <CFTVMapping 
+                    project={selectedProject} 
+                    onUpdate={async (data) => {
+                      try {
+                        await dataService.updateProject(selectedProject.id, {
+                          ...selectedProject,
+                          cftvData: data
+                        });
+                        await refreshData();
+                      } catch (e) {
+                        console.error("Failed to update CFTV data:", e);
+                      }
+                    }}
+                  />
+                ) : selectedProject.type === 'REDES' ? (
+                  <NetworkMapping 
+                    project={selectedProject} 
+                    onUpdate={async (data) => {
+                      try {
+                        await dataService.updateProject(selectedProject.id, {
+                          ...selectedProject,
+                          networkData: data
+                        });
+                        await refreshData();
+                      } catch (e) {
+                        console.error("Failed to update Network data:", e);
+                      }
+                    }}
+                  />
+                ) : null}
               </div>
             ) : viewMode === 'release' && selectedProject ? (
               <div className="absolute inset-0">
@@ -1023,13 +1065,10 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                       onChange={e => setProjectForm({ ...projectForm, type: e.target.value })}
                       className="w-full bg-neutral-50 dark:bg-white/5 border-none rounded-2xl p-4 text-sm font-bold text-black dark:text-white outline-none"
                     >
-                      <option>INFRA</option>
-                      <option>SECURITY</option>
                       <option>SAAS</option>
                       <option>CFTV</option>
-                      <option>DESIGN</option>
+                      <option>REDES</option>
                       <option>CERTIFICAÇÃO</option>
-                      <option>OTIMIZAÇÃO</option>
                       <option>GERAL</option>
                     </select>
                   </div>
