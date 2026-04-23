@@ -14,7 +14,9 @@ export const dataService = {
       ...p,
       burnRate: p.burn_rate,
       riskProfile: p.risk_profile,
-      cftvData: p.cftv_data
+      cftvData: p.cftv_data,
+      qualityData: p.quality_data || p.cftv_data?.qualityDataFallback,
+      complianceData: p.compliance_data || p.cftv_data?.complianceDataFallback
     }));
   },
 
@@ -63,22 +65,70 @@ export const dataService = {
   },
 
   async updateProject(id: string, updates: Partial<Project>) {
+    if (id.startsWith('p-')) {
+       console.log('Skipping Supabase backend update for mock project id:', id);
+       return;
+    }
+
+    const payload: any = {
+      name: updates.name,
+      description: updates.description,
+      type: updates.type,
+      status: updates.status,
+      progress: updates.progress,
+      risk_profile: updates.riskProfile,
+      cftv_data: updates.cftvData,
+      quality_data: updates.qualityData,
+      compliance_data: updates.complianceData
+    };
+
     const { error } = await supabase
       .from('projects')
-      .update({
-        name: updates.name,
-        description: updates.description,
-        type: updates.type,
-        status: updates.status,
-        progress: updates.progress,
-        risk_profile: updates.riskProfile,
-        cftv_data: updates.cftvData
-      })
+      .update(payload)
       .eq('id', id);
-    if (error) throw error;
+
+    if (error) {
+      // PGRST204 = Column not found. Or PGRST200 or similar message checks
+      if (error.code === 'PGRST204' || error.message?.includes('quality_data') || error.message?.includes('compliance_data') || error.code === '42703') {
+         console.warn("dataService: 'quality_data' or 'compliance_data' column might be missing. Using JSONB fallback inside 'cftv_data'.");
+         
+         const { data: current } = await supabase.from('projects').select('cftv_data').eq('id', id).single();
+         const cftvData = current?.cftv_data || {};
+         if (updates.qualityData !== undefined) cftvData.qualityDataFallback = updates.qualityData;
+         if (updates.complianceData !== undefined) cftvData.complianceDataFallback = updates.complianceData;
+         
+         delete payload.quality_data;
+         delete payload.compliance_data;
+         payload.cftv_data = cftvData;
+
+         const { error: fallbackError } = await supabase.from('projects').update(payload).eq('id', id);
+         if (fallbackError) throw fallbackError;
+      } else {
+         throw error;
+      }
+    }
   },
 
   async deleteProject(id: string) {
+    // 1. Buscar IDs das tarefas para limpar atribuições de forma segura
+    const { data: tasks, error: tasksError } = await supabase.from('tasks').select('id').eq('project_id', id);
+    if (tasksError) throw tasksError;
+    
+    if (tasks && tasks.length > 0) {
+      const taskIds = tasks.map(t => t.id);
+      // Deletar atribuições de usuários
+      const { error: assigneesError } = await supabase.from('task_assignees').delete().in('task_id', taskIds);
+      if (assigneesError) throw assigneesError;
+      // Deletar tarefas
+      const { error: tasksDelError } = await supabase.from('tasks').delete().in('id', taskIds);
+      if (tasksDelError) throw tasksDelError;
+    }
+
+    // 2. Deletar marcos (milestones)
+    const { error: mlError } = await supabase.from('milestones').delete().eq('project_id', id);
+    if (mlError) throw mlError;
+
+    // 3. Deletar o projeto
     const { error } = await supabase.from('projects').delete().eq('id', id);
     if (error) throw error;
   },
@@ -98,7 +148,19 @@ export const dataService = {
     
     return (data || []).map(t => ({
       ...t,
-      assignees: t.assignees?.map((a: any) => a.profiles) || []
+      projectId: t.project_id,
+      dueDate: t.due_date,
+      assignees: t.assignees?.map((a: any) => {
+        const p = a.profiles;
+        if (!p) return null;
+        return {
+          id: p.id,
+          name: p.name,
+          avatar: p.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`,
+          role: p.role,
+          email: p.email
+        };
+      }).filter(Boolean) || []
     }));
   },
 
@@ -123,10 +185,15 @@ export const dataService = {
         task_id: data.id,
         user_id: u.id
       }));
-      await supabase.from('task_assignees').insert(assignments);
+      const { error: assignError } = await supabase.from('task_assignees').insert(assignments);
+      if (assignError) throw assignError;
     }
 
-    return data;
+    return {
+      ...data,
+      projectId: data.project_id,
+      dueDate: data.due_date
+    };
   },
 
   async updateTask(id: string, updates: Partial<Task>) {
@@ -144,17 +211,38 @@ export const dataService = {
     if (error) throw error;
 
     if (updates.assignees) {
-      await supabase.from('task_assignees').delete().eq('task_id', id);
+      const { error: delError } = await supabase.from('task_assignees').delete().eq('task_id', id);
+      if (delError) throw delError;
+      
       const assignments = updates.assignees.map(u => ({
         task_id: id,
         user_id: u.id
       }));
-      await supabase.from('task_assignees').insert(assignments);
+      const { error: insertError } = await supabase.from('task_assignees').insert(assignments);
+      if (insertError) throw insertError;
     }
   },
 
   async deleteTask(id: string) {
+    // 1. Remover atribuições primeiro
+    const { error: delAssignError } = await supabase.from('task_assignees').delete().eq('task_id', id);
+    if (delAssignError) throw delAssignError;
+    // 2. Remover a tarefa
     const { error } = await supabase.from('tasks').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async deleteProfile(id: string) {
+    // 1. Remover atribuições deste usuário em tarefas
+    const { error: delAssignError } = await supabase.from('task_assignees').delete().eq('user_id', id);
+    if (delAssignError) throw delAssignError;
+    
+    // 2. Limpar referências em atividades
+    const { error: delActError } = await supabase.from('activities').delete().eq('user_id', id);
+    if (delActError) throw delActError;
+
+    // 3. Remover o perfil
+    const { error } = await supabase.from('profiles').delete().eq('id', id);
     if (error) throw error;
   },
 
@@ -181,7 +269,16 @@ export const dataService = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    return (data || []).map(act => ({
+      ...act,
+      user: act.user ? {
+        id: act.user.id,
+        name: act.user.name,
+        avatar: act.user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${act.user.id}`,
+        role: act.user.role,
+        email: act.user.email
+      } : null
+    })) as any;
   },
 
   // Registro de Atividade
@@ -210,7 +307,7 @@ export const dataService = {
     return (data || []).map(u => ({
       id: u.id,
       name: u.name,
-      avatar: u.avatar_url,
+      avatar: u.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.id}`,
       role: u.role,
       email: u.email
     }));

@@ -1,4 +1,4 @@
-export type Status = 'Em Progresso' | 'Bloqueado' | 'Pendente' | 'Resolvido' | 'Concluído';
+export type Status = 'Em Progresso' | 'Pendente' | 'Resolvido' | 'Concluído';
 export type Priority = 'Urgente' | 'Alta' | 'Média' | 'Baixa';
 
 export interface User {
@@ -32,12 +32,14 @@ export interface Task {
 
 export interface CFTVPoint {
   id: string;
-  type: 'camera' | 'camera_bullet' | 'camera_dome' | 'box' | 'sensor' | 'pole' | 'rack' | 'switch' | 'dvr' | 'nvr';
+  type: 'camera' | 'camera_bullet' | 'camera_dome' | 'box' | 'sensor' | 'pole' | 'rack' | 'switch' | 'dvr' | 'nvr' | 'router' | 'employee_box' | 'monitor_station' | 'street_lamp';
   x: number;
   y: number;
   label: string;
   angle?: number;
   fovRadius?: number;
+  assignedUserId?: string;
+  taskId?: string;
 }
 
 export interface CFTVLink {
@@ -69,6 +71,40 @@ export interface Project {
     extraItems?: any[];
   };
   milestones?: Milestone[];
+  qualityData?: any;
+  complianceData?: {
+    documents: ComplianceDocument[];
+  };
+}
+
+export interface ComplianceDocument {
+  id: string;
+  title: string;
+  type: 'policy' | 'contract' | 'report' | 'evidence' | 'pop' | 'manual';
+  status: 'draft' | 'pending_signature' | 'signed' | 'approved' | 'rejected';
+  department: string;
+  dueDate?: string;
+  fileUrl?: string;
+  content?: string; // Used for rich-text editing / collaboration
+  attachments?: { id: string; name: string; url: string; uploadedAt: string }[];
+  collaborators?: User[]; // Shared users
+  signers?: { name: string; email: string; signed: boolean; signedAt?: string }[];
+}
+
+export interface QualityPoint {
+  id: string;
+  type: 'module' | 'bug' | 'adjustment' | 'feature' | 'test';
+  x: number;
+  y: number;
+  label: string;
+  taskId?: string;
+}
+
+export interface QualityLink {
+  id: string;
+  fromId: string;
+  toId: string;
+  type: 'dependency' | 'impact' | 'flow';
 }
 
 export interface Activity {

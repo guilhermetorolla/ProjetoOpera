@@ -1,15 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, Search, Filter, ArrowUpRight, CheckCircle2, Clock, AlertCircle, X, ChevronRight, Hash } from 'lucide-react';
+import { Users, Search, Filter, ArrowUpRight, CheckCircle2, Clock, AlertCircle, X, ChevronRight, Hash, Trash2 } from 'lucide-react';
 import { useData } from '../DataContext';
+import { dataService } from '../services/dataService';
 import { cn } from '../lib/utils';
 import { User, Task } from '../types';
 
 export default function ResourceMap() {
-  const { users, tasks, projects } = useData();
+  const { users, tasks, projects, refreshData, logActivity } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Sobrecarga' | 'Otimizado' | 'Disponível'>('Todos');
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const resourceData = useMemo(() => {
     const list = users.map(user => {
@@ -27,13 +29,30 @@ export default function ResourceMap() {
         return { id: p.id, name: p.name, percentage: Math.round(percentage) };
       }).filter(p => p.percentage > 0);
 
+      // Processamento das tarefas com identificação de CFTV
+      const enhancedTasks = userTasks.map(t => {
+        const project = projects.find(p => p.id === t.projectId);
+        const cftvAsset = project?.cftvData?.points.find(pt => pt.taskId === t.id);
+        return {
+          ...t,
+          projectName: project?.name || 'Sem Projeto',
+          isCFTV: !!cftvAsset,
+          assetLabel: cftvAsset?.label
+        };
+      });
+
+      const activeTasksList = enhancedTasks.filter(t => t.status !== 'Concluído' && t.status !== 'Resolvido');
+      const completedTasksCount = enhancedTasks.filter(t => t.status === 'Concluído' || t.status === 'Resolvido').length;
+      const cftvTasksCount = enhancedTasks.filter(t => t.isCFTV && t.status !== 'Concluído' && t.status !== 'Resolvido').length;
+
       return {
         ...user,
-        userTasks,
+        userTasks: enhancedTasks,
         totalTasks: userTasks.length,
-        activeTasksList: activeTasks,
-        activeTasksCount: activeTasks.length,
-        completedTasksCount: completedTasks.length,
+        activeTasksList,
+        activeTasksCount: activeTasksList.length,
+        completedTasksCount,
+        cftvTasksCount,
         workload: workloadValue,
         distribution: projectDistribution,
         resourceStatus: workloadValue > 80 ? 'Sobrecarga' : workloadValue > 40 ? 'Otimizado' : 'Disponível'
@@ -152,14 +171,18 @@ export default function ResourceMap() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 py-4 border-y border-black/5 dark:border-white/5">
+                  <div className="grid grid-cols-3 gap-4 py-4 border-y border-black/5 dark:border-white/5">
                     <div className="text-center">
                       <p className="text-xl font-black text-black dark:text-white">{resource.activeTasksCount}</p>
                       <p className="text-[8px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-[0.2em]">Ativas</p>
                     </div>
-                    <div className="text-center border-l border-black/5 dark:border-white/10">
+                    <div className="text-center border-x border-black/5 dark:border-white/10">
                       <p className="text-xl font-black text-black dark:text-white">{resource.completedTasksCount}</p>
                       <p className="text-[8px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-[0.2em]">Resolvidas</p>
+                    </div>
+                    <div className="text-center relative">
+                      <p className="text-xl font-black text-blue-600 dark:text-blue-400">{resource.cftvTasksCount}</p>
+                      <p className="text-[8px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-[0.2em]">CFTV</p>
                     </div>
                   </div>
 
@@ -269,10 +292,14 @@ export default function ResourceMap() {
 
               <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-white dark:bg-[#121212]">
                 {/* Meta Grid */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div className="p-4 bg-neutral-50 dark:bg-white/5 rounded-2xl">
-                    <p className="text-[8px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-widest mb-1">Tarefas Ativas</p>
+                    <p className="text-[8px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-widest mb-1">Ativas</p>
                     <p className="text-2xl font-black text-black dark:text-white">{selectedUser.activeTasksCount}</p>
+                  </div>
+                  <div className="p-4 bg-neutral-50 dark:bg-white/5 rounded-2xl border border-blue-500/20">
+                    <p className="text-[8px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">CFTV</p>
+                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{selectedUser.cftvTasksCount}</p>
                   </div>
                   <div className="p-4 bg-neutral-50 dark:bg-white/5 rounded-2xl">
                     <p className="text-[8px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-widest mb-1">Concluídas</p>
@@ -295,7 +322,7 @@ export default function ResourceMap() {
                   </div>
                   
                   <div className="space-y-3">
-                    {selectedUser.activeTasksList.length > 0 ? selectedUser.activeTasksList.map((task: Task) => (
+                    {selectedUser.activeTasksList.length > 0 ? selectedUser.activeTasksList.map((task: any) => (
                       <div key={task.id} className="p-4 rounded-2xl border border-neutral-100 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10 transition-all flex items-center justify-between group">
                         <div className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={cn(
@@ -303,9 +330,16 @@ export default function ResourceMap() {
                             task.priority === 'Urgente' ? "bg-red-500" : task.priority === 'Alta' ? "bg-orange-500" : "bg-blue-500"
                           )} />
                           <div className="truncate">
-                            <p className="text-xs font-bold truncate text-black dark:text-white">{task.title}</p>
+                            <p className="text-xs font-bold truncate text-black dark:text-white flex items-center gap-2">
+                              {task.title}
+                              {task.isCFTV && (
+                                <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[8px] rounded uppercase flex items-center gap-1 shrink-0">
+                                  <Hash size={8} /> {task.assetLabel}
+                                </span>
+                              )}
+                            </p>
                             <p className="text-[10px] text-[#5d5e66] dark:text-white/40 flex items-center gap-2 mt-1">
-                              <Hash size={10} /> {task.project}
+                              {task.projectName}
                               <span className="opacity-30">•</span>
                               <span className={cn(
                                 "font-bold",
@@ -347,10 +381,46 @@ export default function ResourceMap() {
                 </div>
               </div>
               
-              <div className="p-8 bg-neutral-50 dark:bg-white/[0.02] border-t border-black/5 dark:border-white/5">
+              <div className="p-8 bg-neutral-50 dark:bg-white/[0.02] border-t border-black/5 dark:border-white/5 space-y-3">
                 <button className="w-full py-4 bg-black dark:bg-white text-white dark:text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
                   Redirecionar Tarefas
                 </button>
+                
+                {!showDeleteConfirm ? (
+                  <button 
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full py-4 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={12} /> Excluir Perfil Permanentemente
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await dataService.deleteProfile(selectedUser.id);
+                          logActivity('excluiu o perfil de', selectedUser.name, 'SISTEMA');
+                          await refreshData();
+                          setSelectedUser(null);
+                        } catch (err: any) {
+                          console.error('Erro ao deletar perfil:', err);
+                          alert(`Erro ao excluir perfil: ${err.message || 'Erro desconhecido.'}`);
+                        } finally {
+                          setShowDeleteConfirm(false);
+                        }
+                      }}
+                      className="flex-1 py-4 bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl animate-in zoom-in-95 hover:bg-red-700 transition-all"
+                    >
+                      CONFIRMAR AGORA
+                    </button>
+                    <button 
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="px-6 py-4 bg-neutral-200 dark:bg-white/10 text-neutral-600 dark:text-white/60 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-neutral-300 dark:hover:bg-white/20 transition-all"
+                    >
+                      X
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>

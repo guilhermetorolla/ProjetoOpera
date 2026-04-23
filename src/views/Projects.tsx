@@ -19,36 +19,50 @@ import {
   Send,
   Trash2,
   Map as MapIcon,
-  LayoutGrid
+  LayoutGrid,
+  PlayCircle,
+  CheckCircle2,
+  MapPin
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { useData } from '../DataContext';
 import { cn } from '../lib/utils';
 import { dataService } from '../services/dataService';
 import { Status, Project, Task, Priority, User, Comment } from '../types';
 import CFTVMapping from '../components/CFTVMapping';
+import SaaSReleaseLog from '../components/SaaSReleaseLog';
+import ComplianceTracker from '../components/ComplianceTracker';
 
-const columns: { id: Status; label: string; color: string }[] = [
-  { id: 'Pendente', label: 'A Fazer', color: '#5d5e66' },
-  { id: 'Em Progresso', label: 'Em Progresso', color: '#000000' },
-  { id: 'Resolvido', label: 'Revisão', color: '#5d5e66' },
-  { id: 'Concluído', label: 'Concluído', color: '#10b981' },
+const columns: { id: Status; label: string; color: string; icon: any }[] = [
+  { id: 'Pendente', label: 'A Fazer', color: '#f59e0b', icon: Clock },
+  { id: 'Em Progresso', label: 'Em Progresso', color: '#3b82f6', icon: PlayCircle },
+  { id: 'Resolvido', label: 'Revisão', color: '#10b981', icon: CheckCircle2 },
+  { id: 'Concluído', label: 'Concluído', color: '#10b981', icon: CheckCircle2 },
 ];
 
-const TaskCard = React.memo(({ task, onDragStart, onClick, openEditTask, handleDeleteTask }: { 
+const TaskCard = React.memo(({ task, onDragStart, onDragEnd, onClick, openEditTask, handleDeleteTask }: { 
   task: Task, 
   onDragStart: (e: any, id: string) => void, 
-  onClick: () => void,
+  onDragEnd: (e: any) => void,
+  onClick: (t: Task) => void,
   openEditTask: (t: Task) => void,
   handleDeleteTask: (id: string, e: any) => void
 }) => {
   return (
     <motion.div
       layout
+      layoutId={task.id}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
-      onClick={onClick}
-      className="bg-white/40 dark:bg-white/5 backdrop-blur-md p-5 rounded-xl shadow-[0_4px_12px_-2px_rgba(0,0,0,0.03)] dark:shadow-none border border-neutral-100 dark:border-white/10 hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] dark:hover:bg-white/10 transition-all cursor-grab active:cursor-grabbing group"
+      onDragEnd={onDragEnd}
+      onClick={() => onClick(task)}
+      className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-5 rounded-xl shadow-[0_4px_12px_-2px_rgba(0,0,0,0.03)] dark:shadow-none border border-neutral-100 dark:border-white/10 hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.15)] dark:hover:bg-white/10 transition-all cursor-grab active:cursor-grabbing group relative overflow-hidden"
     >
+      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-black/5 dark:via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="flex justify-between items-start mb-3">
         <span className={cn(
           "text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-[4px]",
@@ -58,16 +72,17 @@ const TaskCard = React.memo(({ task, onDragStart, onClick, openEditTask, handleD
         )}>
           {task.priority}
         </span>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
           <button 
             onClick={(e) => { e.stopPropagation(); openEditTask(task); }}
-            className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded dark:text-white/60"
+            className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded dark:text-white/60 transition-colors"
           >
             <MoreHorizontal size={12} />
           </button>
           <button 
             onClick={(e) => handleDeleteTask(task.id, e)}
-            className="p-1 hover:bg-red-50 dark:hover:bg-red-500/20 text-red-500 rounded"
+            className="p-1 hover:bg-red-50 dark:hover:bg-red-500/20 text-red-500 rounded transition-colors"
+            title="Excluir"
           >
             <Trash2 size={12} />
           </button>
@@ -75,6 +90,17 @@ const TaskCard = React.memo(({ task, onDragStart, onClick, openEditTask, handleD
       </div>
 
       <h4 className="text-sm font-bold text-black dark:text-white mb-1 leading-snug">{task.title}</h4>
+      {(() => {
+        const coordsMatch = task.description?.match(/📍 Localização Geográfica: ([\-\d\.]+, [\-\d\.]+)/);
+        if (coordsMatch) {
+          return (
+            <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 mb-2 font-mono bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-md inline-block">
+              {coordsMatch[1]}
+            </p>
+          );
+        }
+        return null;
+      })()}
       <p className="text-[10px] text-[#5d5e66] dark:text-white/40 mb-4">{task.dueDate}</p>
 
       <div className="flex items-center justify-between">
@@ -89,12 +115,34 @@ const TaskCard = React.memo(({ task, onDragStart, onClick, openEditTask, handleD
               <span className="text-[10px] font-bold">{task.images.length}</span>
             </div>
           )}
+          {task.description?.includes('📍') && (
+            <div className="flex items-center gap-1 text-blue-500">
+              <MapPin size={12} />
+              <span className="text-[8px] font-bold uppercase tracking-tighter">Local</span>
+            </div>
+          )}
         </div>
         
-        <div className="flex -space-x-1.5">
-          {task.assignees.map(u => (
-            <img key={u.id} src={u.avatar} className="w-6 h-6 rounded-full border-2 border-white dark:border-[#121212] object-cover shadow-sm" alt="" title={u.name} />
-          ))}
+        <div className="flex items-center gap-3">
+          {(() => {
+            const col = columns.find(c => c.id === task.status);
+            if (!col) return null;
+            const Icon = col.icon || Clock;
+            return (
+              <div 
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-bold text-white uppercase tracking-widest"
+                style={{ backgroundColor: col.color }}
+              >
+                <Icon size={10} strokeWidth={3} className={task.status === 'Em Progresso' ? "animate-pulse" : ""} />
+                {task.status}
+              </div>
+            );
+          })()}
+          <div className="flex -space-x-1.5">
+            {task.assignees.map(u => (
+              <img key={u.id} src={u.avatar} className="w-6 h-6 rounded-full border-2 border-white dark:border-[#121212] object-cover shadow-sm" alt="" title={u.name} />
+            ))}
+          </div>
         </div>
       </div>
     </motion.div>
@@ -126,10 +174,11 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
   
   // Modals visibility
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: 'project' | 'task'; title: string } | null>(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [viewMode, setViewMode] = useState<'board' | 'map'>('board');
+  const [viewMode, setViewMode] = useState<'board' | 'map' | 'release'>('board');
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -205,6 +254,23 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
           burnRate: 'Estável',
           cftvData: projectForm.type === 'CFTV' ? { points: [], links: [] } : undefined
         });
+
+        // Automatização para SaaS: Adiciona um marco inicial de liberação
+        if (projectForm.type === 'SAAS' && newP?.id) {
+          try {
+            await dataService.createMilestone({
+              project_id: newP.id,
+              title: 'Configuracão de Ambiente Ibiunet',
+              description: 'Preparação do core v1 e infra para usuários beta internos.',
+              due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              is_active: true,
+              is_completed: false
+            });
+          } catch (milestoneError) {
+            console.error('Erro ao criar marco automático para SaaS:', milestoneError);
+          }
+        }
+
         console.log('Projects: Retorno do service com sucesso:', newP);
         logActivity('criou o projeto', newP?.name || projectForm.name, 'GESTÃO');
       }
@@ -225,17 +291,32 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
     }
   };
 
-  const handleDeleteProject = async (id: string, e?: React.MouseEvent) => {
+  const handleDeleteProject = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (confirm('Deseja realmente excluir este projeto permanentemente?')) {
-      try {
+    const project = localProjects.find(p => p.id === id);
+    setDeleteConfirm({ id, type: 'project', title: project?.name || 'este projeto' });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    const { id, type } = deleteConfirm;
+    
+    try {
+      if (type === 'project') {
         await dataService.deleteProject(id);
-        await refreshData();
         if (selectedProjectId === id) setSelectedProjectId(null);
-        logActivity('excluiu um projeto', 'deletado', 'GESTÃO');
-      } catch (error) {
-        console.error('Erro ao deletar projeto:', error);
+        logActivity('excluiu um projeto', deleteConfirm.title, 'GESTÃO');
+      } else {
+        await dataService.deleteTask(id);
+        if (selectedTask?.id === id) setSelectedTask(null);
+        logActivity('excluiu a tarefa', deleteConfirm.title, 'OPERACIONAL');
       }
+      await refreshData();
+    } catch (error: any) {
+      console.error(`Erro ao deletar ${type}:`, error);
+      alert(`Erro ao excluir: ${error.message || 'Erro de conexão'}`);
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -308,18 +389,11 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
     setIsTaskModalOpen(true);
   }, []);
 
-  const handleDeleteTask = useCallback(async (taskId: string, e?: React.MouseEvent) => {
+  const handleDeleteTask = useCallback((taskId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (confirm('Excluir esta tarefa permanentemente?')) {
-      try {
-        await dataService.deleteTask(taskId);
-        await refreshData();
-        if (selectedTask?.id === taskId) setSelectedTask(null);
-      } catch (error) {
-        console.error('Erro ao deletar tarefa:', error);
-      }
-    }
-  }, [selectedTask]);
+    const task = localTasks.find(t => t.id === taskId);
+    setDeleteConfirm({ id: taskId, type: 'task', title: task?.title || 'esta tarefa' });
+  }, [localTasks]);
 
   const handleAddComment = () => {
     if (!selectedTask || !commentText.trim()) return;
@@ -388,24 +462,50 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
     }
   };
 
-  // Drag and Drop handlers
+  // Drag and Drop handlers with optimized performance
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [activeColumnId, setActiveColumnId] = useState<Status | null>(null);
+
   const onDragStart = useCallback((e: React.DragEvent | any, taskId: string) => {
+    setDraggedTaskId(taskId);
     if (e.dataTransfer) {
       e.dataTransfer.setData('taskId', taskId);
       e.dataTransfer.effectAllowed = 'move';
+      
+      // Custom ghost image if needed, but keeping it simple for performance
+      const dragPreview = e.currentTarget.cloneNode(true);
+      dragPreview.style.position = "absolute";
+      dragPreview.style.top = "-1000px";
+      document.body.appendChild(dragPreview);
+      e.dataTransfer.setDragImage(dragPreview, 20, 20);
+      setTimeout(() => document.body.removeChild(dragPreview), 0);
     }
   }, []);
 
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
+  const onDragEnd = useCallback(() => {
+    setDraggedTaskId(null);
+    setActiveColumnId(null);
+  }, []);
 
-  const onDrop = (e: React.DragEvent, status: Status) => {
+  const onDragOver = useCallback((e: React.DragEvent, status: Status) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
-    handleUpdateTaskStatus(taskId, status);
-  };
+    if (activeColumnId !== status) {
+      setActiveColumnId(status);
+    }
+  }, [activeColumnId]);
+
+  const onDrop = useCallback((e: React.DragEvent, status: Status) => {
+    e.preventDefault();
+    setActiveColumnId(null);
+    const taskId = e.dataTransfer.getData('taskId') || draggedTaskId;
+    if (taskId) {
+      handleUpdateTaskStatus(taskId, status);
+    }
+  }, [draggedTaskId]);
+
+  const handleTaskClick = useCallback((task: Task) => {
+    setSelectedTask(task);
+  }, []);
 
   return (
     <motion.div 
@@ -445,23 +545,30 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                 className="bg-white/40 dark:bg-white/5 backdrop-blur-xl p-8 rounded-[32px] border border-neutral-100 dark:border-white/10 shadow-sm cursor-pointer hover:shadow-2xl transition-all group relative"
               >
                 <div className="flex justify-between items-start mb-8">
-                  <span className="text-[10px] font-bold text-[#5d5e66] dark:text-white/40 bg-neutral-100 dark:bg-white/10 px-3 py-1 rounded-full uppercase tracking-widest">{project.type}</span>
+                  <span className={cn(
+                    "text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest",
+                    project.type === 'SAAS' 
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" 
+                      : "text-[#5d5e66] dark:text-white/40 bg-neutral-100 dark:bg-white/10"
+                  )}>
+                    {project.type}
+                  </span>
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={(e) => openEditProject(project, e)}
-                      className="p-2 hover:bg-neutral-50 dark:hover:bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity dark:text-white/60"
+                      className="p-2 hover:bg-neutral-50 dark:hover:bg-white/10 rounded-full transition-opacity dark:text-white/60"
                     >
                       <MoreHorizontal size={16} />
                     </button>
                     <button 
                       onClick={(e) => handleDeleteProject(project.id, e)}
-                      className="p-2 hover:bg-red-50 dark:hover:bg-red-500/20 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-2 hover:bg-red-50 dark:hover:bg-red-500/20 text-red-500 rounded-full transition-opacity"
                     >
                       <Trash2 size={16} />
                     </button>
                     <div className={cn(
                       "w-2 h-2 rounded-full",
-                      project.status === 'Bloqueado' ? "bg-red-500 animate-pulse" : "bg-emerald-400"
+                      project.status === 'Concluído' ? "bg-emerald-400" : project.status === 'Em Andamento' ? "bg-blue-400" : "bg-amber-400"
                     )} />
                   </div>
                 </div>
@@ -519,7 +626,12 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                     <span className="opacity-30">/</span>
                     <span className="text-black dark:text-white font-black">{selectedProject?.name}</span>
                   </nav>
-                  <h2 className="text-3xl font-extrabold tracking-tighter text-black dark:text-white uppercase">{viewMode === 'board' ? 'Quadro de Operação' : 'Layout de Infraestrutura'}</h2>
+                  <h2 className="text-3xl font-extrabold tracking-tighter text-black dark:text-white uppercase">
+                    {viewMode === 'board' ? 'Quadro de Operação' 
+                     : viewMode === 'map' ? 'Layout de Infraestrutura' 
+                     : viewMode === 'release' ? 'Diários de Plataforma' 
+                     : 'Adequação LGPD & Documentos'}
+                  </h2>
                 </div>
                 
                 {selectedProject?.type === 'CFTV' && (
@@ -541,6 +653,52 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                       )}
                     >
                       <MapIcon size={14} /> Projeto CFTV
+                    </button>
+                  </div>
+                )}
+
+                {selectedProject?.type === 'SAAS' && (
+                  <div className="flex bg-neutral-100 dark:bg-white/10 p-1 rounded-xl gap-1">
+                    <button 
+                      onClick={() => setViewMode('board')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        viewMode === 'board' ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm" : "text-neutral-400 dark:text-white/20 hover:text-black dark:hover:text-white"
+                      )}
+                    >
+                      <LayoutGrid size={14} /> Quadro
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('release')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        viewMode === 'release' ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm" : "text-neutral-400 dark:text-white/20 hover:text-black dark:hover:text-white"
+                      )}
+                    >
+                      <TrendingUp size={14} /> Relatório com IA
+                    </button>
+                  </div>
+                )}
+
+                {selectedProject?.type === 'CERTIFICAÇÃO' && (
+                  <div className="flex bg-neutral-100 dark:bg-white/10 p-1 rounded-xl gap-1">
+                    <button 
+                      onClick={() => setViewMode('board')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        viewMode === 'board' ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm" : "text-neutral-400 dark:text-white/20 hover:text-black dark:hover:text-white"
+                      )}
+                    >
+                      <LayoutGrid size={14} /> Gestão / Quadro
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('compliance')}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        viewMode === 'compliance' ? "bg-white dark:bg-white/10 text-black dark:text-white shadow-sm" : "text-neutral-400 dark:text-white/20 hover:text-black dark:hover:text-white"
+                      )}
+                    >
+                      <Paperclip size={14} /> Central de Documentos
                     </button>
                   </div>
                 )}
@@ -590,35 +748,49 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                   {columns.map(col => (
                       <div 
                         key={col.id} 
-                        className="w-80 flex flex-col h-full bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-3xl p-4 overflow-hidden border border-black/5 dark:border-white/5"
-                        onDragOver={onDragOver}
+                        className={cn(
+                          "w-80 flex flex-col h-full rounded-[32px] p-4 overflow-hidden border transition-all duration-300",
+                          activeColumnId === col.id 
+                            ? "bg-black/5 dark:bg-white/10 border-black/20 dark:border-white/20 scale-[1.02] shadow-2xl" 
+                            : "bg-white/5 dark:bg-white/5 backdrop-blur-sm border-black/5 dark:border-white/5"
+                        )}
+                        onDragOver={(e) => onDragOver(e, col.id)}
+                        onDragLeave={() => setActiveColumnId(null)}
                         onDrop={(e) => onDrop(e, col.id)}
                       >
-                        <div className="flex items-center justify-between mb-4 px-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
-                            <h3 className="text-[10px] font-extrabold text-black dark:text-white uppercase tracking-widest">{col.label}</h3>
-                            <span className="bg-neutral-100 dark:bg-white/10 px-2 py-0.5 rounded-full text-[10px] font-bold text-[#5d5e66] dark:text-white/40">
+                        <div className="flex items-center justify-between mb-6 px-1">
+                          <div className="flex items-center gap-3">
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: col.color }}>
+                               <col.icon size={12} strokeWidth={3} />
+                            </div>
+                            <h3 className="text-[11px] font-black text-black dark:text-white uppercase tracking-[0.2em]">{col.label}</h3>
+                            <span className="bg-black/5 dark:bg-white/10 px-2.5 py-1 rounded-full text-[10px] font-black text-[#5d5e66] dark:text-white/60">
                               {projectTasks.filter(t => t.status === col.id).length}
                             </span>
                           </div>
                         </div>
 
-                      <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide pb-10">
-                        {projectTasks.filter(t => t.status === col.id).map(task => (
-                          <TaskCard
-                            key={task.id}
-                            task={task}
-                            onDragStart={onDragStart}
-                            onClick={() => setSelectedTask(task)}
-                            openEditTask={openEditTask}
-                            handleDeleteTask={handleDeleteTask}
-                          />
-                        ))}
+                      <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-hide pb-20">
+                        <AnimatePresence mode="popLayout" initial={false}>
+                          {projectTasks.filter(t => t.status === col.id).map(task => (
+                            <TaskCard
+                              key={task.id}
+                              task={task}
+                              onDragStart={onDragStart}
+                              onDragEnd={onDragEnd}
+                              onClick={handleTaskClick}
+                              openEditTask={openEditTask}
+                              handleDeleteTask={handleDeleteTask}
+                            />
+                          ))}
+                        </AnimatePresence>
                         
                         {projectTasks.filter(t => t.status === col.id).length === 0 && (
-                          <div className="h-20 border-2 border-dashed border-neutral-100 rounded-xl flex items-center justify-center opacity-30">
-                            <p className="text-[8px] font-bold uppercase tracking-widest">Sem tasks</p>
+                          <div className="h-32 border-2 border-dashed border-black/5 dark:border-white/5 rounded-2xl flex flex-col items-center justify-center opacity-20 transition-all group-hover:opacity-40">
+                             <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-white/5 flex items-center justify-center mb-2">
+                               <Plus size={14} />
+                             </div>
+                             <p className="text-[9px] font-black uppercase tracking-[0.2em]">Área Vazia</p>
                           </div>
                         )}
                       </div>
@@ -626,20 +798,58 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                   ))}
                 </div>
               </div>
-            ) : selectedProject && (
+            ) : viewMode === 'map' && selectedProject ? (
               <div className="absolute inset-0">
                 <CFTVMapping 
                   project={selectedProject} 
                   onUpdate={async (data) => {
-                    await dataService.updateProject(selectedProject.id, {
-                      ...selectedProject,
-                      cftvData: data
-                    });
-                    refreshData();
+                    try {
+                      await dataService.updateProject(selectedProject.id, {
+                        ...selectedProject,
+                        cftvData: data
+                      });
+                      await refreshData();
+                    } catch (e) {
+                      console.error("Failed to update CFTV data:", e);
+                    }
                   }}
                 />
               </div>
-            )}
+            ) : viewMode === 'release' && selectedProject ? (
+              <div className="absolute inset-0">
+                <SaaSReleaseLog 
+                  project={selectedProject}
+                  onUpdate={async (data) => {
+                    try {
+                      await dataService.updateProject(selectedProject.id, {
+                        ...selectedProject,
+                        qualityData: data
+                      });
+                      await refreshData();
+                    } catch (e) {
+                      console.error("Failed to update SaaS release log data:", e);
+                    }
+                  }}
+                />
+              </div>
+            ) : viewMode === 'compliance' && selectedProject ? (
+              <div className="absolute inset-0">
+                <ComplianceTracker 
+                  project={selectedProject}
+                  onUpdate={async (data) => {
+                    try {
+                      await dataService.updateProject(selectedProject.id, {
+                        ...selectedProject,
+                        complianceData: data
+                      });
+                      await refreshData();
+                    } catch (e) {
+                      console.error("Failed to update Compliance tracker data:", e);
+                    }
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       )}
@@ -815,8 +1025,10 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                     >
                       <option>INFRA</option>
                       <option>SECURITY</option>
+                      <option>SAAS</option>
                       <option>CFTV</option>
                       <option>DESIGN</option>
+                      <option>CERTIFICAÇÃO</option>
                       <option>OTIMIZAÇÃO</option>
                       <option>GERAL</option>
                     </select>
@@ -830,7 +1042,6 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
                     >
                       <option>Em Andamento</option>
                       <option>Planejamento</option>
-                      <option>Bloqueado</option>
                       <option>Concluído</option>
                     </select>
                   </div>
@@ -1006,14 +1217,62 @@ export default function Projects({ onViewChange }: { onViewChange?: (v: string) 
 
                   <div className="space-y-4">
                     <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#5d5e66] dark:text-white/40">Descrição da Operação</h4>
-                    <p className="text-sm text-[#5d5e66] dark:text-white/60 leading-relaxed font-medium">
-                      {selectedTask.description || "Nenhuma descrição detalhada disponível para esta operação."}
-                    </p>
+                    <div className="markdown-body text-sm text-[#5d5e66] dark:text-white/60 leading-relaxed font-medium">
+                      {selectedTask.description ? (
+                        <ReactMarkdown>{selectedTask.description}</ReactMarkdown>
+                      ) : (
+                        "Nenhuma descrição detalhada disponível para esta operação."
+                      )}
+                    </div>
                   </div>
                 </section>
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirm(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-white dark:bg-[#1A1A1D] rounded-[32px] p-8 shadow-2xl border border-neutral-100 dark:border-white/10"
+            >
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-500/20 rounded-full flex items-center justify-center mb-6 mx-auto">
+                <Trash2 className="text-red-500" size={28} />
+              </div>
+              <h3 className="text-xl font-black text-center text-black dark:text-white mb-2 uppercase tracking-tighter">
+                Confirmar Exclusão
+              </h3>
+              <p className="text-sm text-center text-neutral-500 dark:text-neutral-400 mb-8 leading-relaxed">
+                Você tem certeza que deseja excluir <span className="font-bold text-black dark:text-white">"{deleteConfirm.title}"</span>? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={confirmDelete}
+                  className="w-full py-4 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-red-500/30 hover:bg-red-600 active:scale-95 transition-all"
+                >
+                  Sim, Excluir Agora
+                </button>
+                <button 
+                  onClick={() => setDeleteConfirm(null)}
+                  className="w-full py-4 bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-white/60 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-neutral-200 dark:hover:bg-white/10 active:scale-95 transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </motion.div>

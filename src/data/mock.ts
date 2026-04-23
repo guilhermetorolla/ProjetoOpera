@@ -69,7 +69,7 @@ export const tasks: Task[] = [
     title: 'Refatoração do microserviço de autenticação',
     project: 'Security Shield',
     projectId: 'p3',
-    status: 'Bloqueado',
+    status: 'Pendente',
     priority: 'Média',
     assignees: [users[2]],
     dueDate: '2024-09-02'
@@ -128,7 +128,7 @@ export const projects: Project[] = [
     id: 'p3',
     name: 'Security Shield V2',
     description: 'Endurecimento completo da camada de segurança e auditorias externas.',
-    status: 'Bloqueado',
+    status: 'Em Andamento',
     progress: 45,
     burnRate: '$1.2M',
     type: 'SECURITY',
@@ -149,6 +149,65 @@ export const projects: Project[] = [
     riskProfile: [
       { label: 'Coerência', level: 'low' }
     ]
+  },
+  {
+    id: 'p-saas-1',
+    name: 'Ibiunet Cloud Release',
+    description: 'Plataforma de gestão integrada para operações ibiunet.',
+    type: 'SAAS',
+    status: 'Em Andamento',
+    progress: 45,
+    riskProfile: [{ label: 'Escalabilidade', level: 'high' }],
+    burnRate: '$1.2M',
+    qualityData: {
+      log: [
+        {
+          id: 'log1',
+          date: '2024-04-20T10:00:00Z',
+          version: 'v1.0.4',
+          rawText: 'Lançamento inicial da plataforma interna. Foram mapeados os serviços de autenticação e o banco de dados. Resolvido o problema de latência que acontecia no login.',
+          analysis: {
+            features: ['Integração de serviços de autenticação', 'Setup robusto do banco de dados'],
+            bugs: ['Resolvido problema grave de latência no login'],
+            infra: ['Otimização inicial de API cloud'],
+            impact: 'high'
+          }
+        }
+      ]
+    }
+  },
+  {
+    id: 'p-cert-1',
+    name: 'Adequação LGPD Global',
+    description: 'Centralização de contratos, políticas de privacidade e solicitações de assinaturas.',
+    type: 'CERTIFICAÇÃO',
+    status: 'Em Progresso',
+    progress: 30,
+    riskProfile: [{ label: 'Jurídico', level: 'high' }],
+    burnRate: 'Sob Controle',
+    complianceData: {
+      documents: [
+        {
+          id: 'doc-1',
+          title: 'Política de Tratamento de Dados v2.0',
+          type: 'policy',
+          status: 'pending_signature',
+          department: 'Jurídico',
+          dueDate: '2024-06-01',
+          signers: [
+            { name: 'Diretoria Executiva', email: 'diretoria@ibiunet.com', signed: false },
+            { name: 'DPO', email: 'dpo@ibiunet.com', signed: true, signedAt: '2024-05-15T14:00:00Z' }
+          ]
+        },
+        {
+          id: 'doc-2',
+          title: 'Aviso de Privacidade - Setor Comercial',
+          type: 'report',
+          status: 'draft',
+          department: 'Comercial'
+        }
+      ]
+    }
   }
 ];
 

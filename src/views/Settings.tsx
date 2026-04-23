@@ -24,6 +24,7 @@ export default function Settings() {
   const { currentUser, setCurrentUser, logActivity, showAnimation, setShowAnimation } = useData();
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('profile');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleUpdateProfile = (field: 'name' | 'role', value: string) => {
     if (!value || value === currentUser[field]) return;
@@ -119,11 +120,11 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="bg-red-500/5 p-6 rounded-2xl border border-red-500/10 space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="space-y-4">
+                  <div className="bg-red-500/5 p-6 rounded-2xl border border-red-500/10 flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-red-600 tracking-tight">Encerrar Sessão</h4>
-                      <p className="text-[11px] text-red-500/70 font-medium">Desconecte sua conta de todos os dispositivos ativos.</p>
+                      <p className="text-[11px] text-red-500/70 font-medium">Desconecte sua conta com segurança.</p>
                     </div>
                     <button 
                       onClick={() => supabase.auth.signOut()}
@@ -131,6 +132,45 @@ export default function Settings() {
                     >
                       Sair Agora
                     </button>
+                  </div>
+
+                  <div className="bg-red-600 p-6 rounded-2xl flex items-center justify-between shadow-xl">
+                    <div>
+                      <h4 className="text-sm font-bold text-white tracking-tight">Zona de Perigo</h4>
+                      <p className="text-[11px] text-white/60 font-medium">Excluir permanentemente seu perfil e dados do sistema.</p>
+                    </div>
+                    {!confirmDelete ? (
+                      <button 
+                        onClick={() => setConfirmDelete(true)}
+                        className="px-4 py-2 bg-white text-red-600 text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-red-50 transition-all shadow-lg"
+                      >
+                        Apagar Minha Conta
+                      </button>
+                    ) : (
+                      <div className="flex gap-2">
+                         <button 
+                          onClick={async () => {
+                            try {
+                              const { dataService } = await import('../services/dataService');
+                              await dataService.deleteProfile(currentUser.id);
+                              await supabase.auth.signOut();
+                            } catch (err: any) {
+                              console.error('Erro ao excluir conta:', err);
+                              alert(`Erro ao excluir conta: ${err.message || 'Erro desconhecido.'}`);
+                            }
+                          }}
+                          className="px-4 py-2 bg-white text-red-600 text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-red-50 transition-all shadow-lg border-2 border-red-200 animate-pulse"
+                        >
+                          CONFIRMAR EXCLUSÃO
+                        </button>
+                        <button 
+                          onClick={() => setConfirmDelete(false)}
+                          className="px-4 py-2 bg-red-700 text-white text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-red-800 transition-all shadow-lg"
+                        >
+                          CANCELAR
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

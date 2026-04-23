@@ -1,7 +1,6 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { GoogleGenAI, Type } from "@google/genai";
 
 async function startServer() {
   const app = express();
@@ -26,58 +25,6 @@ async function startServer() {
       features: ['dashboard', 'projects', 'schedule'],
       database: 'supabase'
     });
-  });
-
-  // Gemini API Proxy
-  app.post("/api/analyze", async (req, res) => {
-    try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-         return res.status(500).json({ error: "Missing GEMINI_API_KEY on the server." });
-      }
-      
-      const { projects, tasks } = req.body;
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const prompt = `
-        Analise o seguinte estado do espaço de trabalho do Opero e forneça 3 insights estratégicos curtos.
-        Projetos: ${JSON.stringify(projects?.map((p: any) => ({ n: p.name, s: p.status, p: p.progress })) || [])}
-        Tarefas: ${JSON.stringify(tasks?.slice(0, 5).map((t: any) => ({ ti: t.title, s: t.status })) || [])}
-        
-        Regras:
-        1. Os insights devem ser ultra-curtos (máximo 12 palavras cada).
-        2. Foque em risco, produtividade ou prazos.
-        3. Use um tom executivo.
-        4. Retorne em formato JSON.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview", 
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                title: { type: Type.STRING },
-                insight: { type: Type.STRING },
-                level: { type: Type.STRING }
-              },
-              required: ["title", "insight", "level"]
-            }
-          }
-        }
-      });
-      
-      const parsed = JSON.parse(response.text || "[]");
-      res.json(parsed);
-
-    } catch (error: any) {
-      console.error("Erro na rota /api/analyze:", error);
-      res.status(500).json({ error: error.message || "Failed to analyze" });
-    }
   });
 
   // Vite middleware for development

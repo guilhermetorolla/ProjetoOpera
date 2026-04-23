@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, History, TrendingDown, Trash2, Archive, Download, Share2, Info, Plus, Calendar as CalendarIcon, X, Sparkles } from 'lucide-react';
+import { CheckCircle2, History, TrendingDown, Trash2, Archive, Download, Share2, Info, Plus, Calendar as CalendarIcon, X, Sparkles, Shield } from 'lucide-react';
 import { useData } from '../DataContext';
 import { cn } from '../lib/utils';
 import { dataService } from '../services/dataService';
@@ -105,7 +105,7 @@ export default function ProjectDetail() {
               <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#5d5e66] dark:text-white/40 bg-neutral-100 dark:bg-white/10 px-2 py-0.5 rounded-sm italic">{selectedProject.type || 'GERAL'}</span>
               <span className={cn(
                 "text-[10px] uppercase tracking-[0.2em] font-bold px-2 py-0.5 rounded-sm",
-                selectedProject.status === 'Bloqueado' ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400" : "bg-neutral-200 dark:bg-white/20 text-black dark:text-white"
+                "bg-neutral-200 dark:bg-white/20 text-black dark:text-white"
               )}>
                 {selectedProject.status.toUpperCase()}
               </span>
@@ -186,6 +186,53 @@ export default function ProjectDetail() {
           </div>
         </div>
       </section>
+
+      {/* SaaS Specific Tracking Section */}
+      {selectedProject.type === 'SAAS' && (
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-500/5 dark:bg-emerald-500/10 p-8 rounded-[32px] border border-emerald-500/20 space-y-6"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-500 rounded-xl text-white">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black tracking-widest uppercase text-emerald-600 dark:text-emerald-400 transition-colors">Monitor de SaaS: Ibiunet</h3>
+              <p className="text-[10px] font-bold text-emerald-600/60 dark:text-emerald-400/40 uppercase tracking-widest transition-colors">Acompanhamento de Liberação e Adoção Interna</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { label: 'Estado do Rollout', value: 'Uso Interno Liberado', icon: CheckCircle2 },
+              { label: 'Ecossistema', value: 'ibiunet', icon: Shield },
+              { label: 'Ambiente Atual', value: 'Produção', icon: History },
+            ].map((item, i) => (
+              <div key={i} className="bg-white/50 dark:bg-black/20 backdrop-blur-sm p-4 rounded-2xl border border-emerald-500/10 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <item.icon size={14} className="text-emerald-500" />
+                  <span className="text-[10px] font-bold text-[#5d5e66] dark:text-white/40 uppercase tracking-widest transition-colors">{item.label}</span>
+                </div>
+                <p className="text-sm font-bold text-black dark:text-white transition-colors">{item.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-4 pt-4 border-t border-emerald-500/10">
+            <div className="flex-1 space-y-2">
+              <div className="flex justify-between text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                <span>Adoção Interna (ibiunet)</span>
+                <span>72%</span>
+              </div>
+              <div className="h-1.5 w-full bg-emerald-500/10 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: '72%' }} />
+              </div>
+            </div>
+          </div>
+        </motion.section>
+      )}
 
       {/* Bento Grid */}
       <div className="grid grid-cols-12 gap-8">

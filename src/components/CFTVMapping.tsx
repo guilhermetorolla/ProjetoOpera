@@ -3,10 +3,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { 
   Trash2, Link as LinkIcon, MousePointer2, 
   Database, Search, ScanLine, Box, Globe, FileText,
-  Cctv, Video, TowerControl, Server, Calculator, DollarSign, PlusCircle, Receipt, X
+  Cctv, Video, TowerControl, Server, Calculator, DollarSign, PlusCircle, Receipt, X,
+  Wifi, UserSquare2, Lightbulb, Monitor, CheckCircle2, Clock, PlayCircle, AlertCircle, MapPin
 } from 'lucide-react';
-import { Project, CFTVPoint, CFTVLink } from '../types';
+import { Project, CFTVPoint, CFTVLink, Status } from '../types';
 import { cn } from '../lib/utils';
+import { useData } from '../DataContext';
+import { dataService } from '../services/dataService';
 import { MapContainer, TileLayer, useMap, useMapEvents, Polyline, Polygon, Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -14,13 +17,17 @@ import 'leaflet/dist/leaflet.css';
 L.Icon.Default.imagePath = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/';
 
 const equipmentTypes = [
-  { id: 'camera_dome', label: 'Câmera Dome', icon: Cctv, color: 'bg-[#98D8D8] text-[#1E6B6B]', group: 'Câmeras' },
-  { id: 'camera_bullet', label: 'Câmera Bullet', icon: Video, color: 'bg-[#A3D9A5] text-[#2D7330]', group: 'Câmeras' },
-  { id: 'nvr', label: 'NVR / DVR', icon: Server, color: 'bg-[#A5D6B6] text-[#2F704A]', group: 'Rede' },
-  { id: 'switch', label: 'Switch', icon: Database, color: 'bg-[#96CBCE] text-[#1D6064]', group: 'Rede' },
-  { id: 'rack', label: 'Rack', icon: Server, color: 'bg-[#B4A9DE] text-[#483A7E]', group: 'Rede' },
-  { id: 'box', label: 'C. Hermética', icon: Box, color: 'bg-[#B0BCC5] text-[#3D4C5A]', group: 'Infra' },
-  { id: 'pole', label: 'Poste', icon: TowerControl, color: 'bg-[#98D8BA] text-[#1D6B4E]', group: 'Infra' },
+  { id: 'camera_dome', label: 'Câmera Dome', icon: Cctv, color: 'text-blue-500', group: 'Câmeras' },
+  { id: 'camera_bullet', label: 'Câmera Bullet', icon: Video, color: 'text-emerald-500', group: 'Câmeras' },
+  { id: 'router', label: 'Roteador / AP', icon: Wifi, color: 'text-sky-500', group: 'Rede' },
+  { id: 'nvr', label: 'NVR / DVR', icon: Server, color: 'text-emerald-600', group: 'Rede' },
+  { id: 'switch', label: 'Switch', icon: Database, color: 'text-teal-500', group: 'Rede' },
+  { id: 'rack', label: 'Rack', icon: Server, color: 'text-indigo-500', group: 'Rede' },
+  { id: 'box', label: 'C. Hermética', icon: Box, color: 'text-slate-500', group: 'Infra', isIllustration: true },
+  { id: 'pole', label: 'Poste', icon: TowerControl, color: 'text-emerald-600', group: 'Infra', isIllustration: true },
+  { id: 'employee_box', label: 'Guarita / Caixa', icon: UserSquare2, color: 'text-amber-600', group: 'Operações', isIllustration: true },
+  { id: 'monitor_station', label: 'Terminal / PDV', icon: Monitor, color: 'text-slate-600', group: 'Operações', isIllustration: true },
+  { id: 'street_lamp', label: 'Iluminação', icon: Lightbulb, color: 'text-yellow-500', group: 'Infra', isIllustration: true },
 ];
 
 const cableTypes = [
@@ -45,26 +52,80 @@ const destinationPoint = (lat: number, lng: number, distanceMeters: number, bear
 };
 
 const iconCache = new Map<string, L.DivIcon>();
-const getCustomIcon = (pointType: string, label: string, isSelected: boolean) => {
-  const cacheKey = `${pointType}-${label}-${isSelected}`;
+const getCustomIcon = (pointType: string, label: string, isSelected: boolean, avatarUrl?: string, taskStatus?: Status) => {
+  const cacheKey = `${pointType}-${label}-${isSelected}-${avatarUrl}-${taskStatus}`;
   if (iconCache.has(cacheKey)) return iconCache.get(cacheKey)!;
   
-  const eq = equipmentTypes.find(e => e.id === pointType);
+  const eq = equipmentTypes.find(e => e.id === pointType) as any;
   const IconComponent = eq?.icon || Box;
-  const colorBg = eq?.color || 'bg-[#B0BCC5] text-[#3D4C5A]';
+  const iconColor = eq?.color || 'text-slate-500';
+  const isIllustration = eq?.isIllustration;
   
+  // Status icon logic
+  let StatusIcon = null;
+  let statusColor = "";
+  if (taskStatus === 'Concluído' || taskStatus === 'Resolvido') {
+    StatusIcon = CheckCircle2;
+    statusColor = "bg-green-500 shadow-green-500/50";
+  } else if (taskStatus === 'Em Progresso') {
+    StatusIcon = PlayCircle;
+    statusColor = "bg-blue-500 animate-pulse shadow-blue-500/50";
+  } else if (taskStatus === 'Pendente') {
+    StatusIcon = Clock;
+    statusColor = "bg-amber-500 shadow-amber-500/50";
+  }
+
   const htmlString = renderToStaticMarkup(
-    <div className="flex flex-col items-center justify-center -translate-y-4 cursor-pointer">
+    <div className="flex flex-col items-center justify-center -translate-y-6 cursor-pointer scale-150">
       <div className={cn(
-        "relative flex items-center justify-center w-11 h-11 rounded-2xl transition-all border border-white/40",
-        "shadow-[4px_4px_10px_rgba(0,0,0,0.15),-4px_-4px_10px_rgba(255,255,255,0.7),inset_3px_3px_6px_rgba(255,255,255,0.6),inset_-3px_-3px_6px_rgba(0,0,0,0.08)]",
-        colorBg,
-        isSelected ? 'ring-4 ring-blue-500 scale-[1.3] z-50 shadow-[0_10px_20px_rgba(0,0,0,0.3)]' : 'hover:scale-110 hover:-translate-y-1'
+        "relative flex items-center justify-center w-12 h-12 transition-all",
+        isSelected && "scale-125 z-50"
       )}>
-        <IconComponent size={22} className="drop-shadow-sm" strokeWidth={2.5} />
+        {/* Illustration Cloud Wrapper */}
+        {isIllustration && (
+           <div className="absolute inset-0 flex items-center justify-center animate-[cloud-swim_6s_infinite_ease-in-out]">
+             <svg viewBox="0 0 24 24" className="w-[140%] h-[140%] text-white dark:text-white/10 opacity-80 drop-shadow-md" fill="currentColor">
+                <path d="M17.5,19c-3.037,0-5.5-2.463-5.5-5.5c0-0.101,0.003-0.2,0.009-0.299C11.332,13.111,10.686,13,10,13c-2.761,0-5,2.239-5,5s2.239,5,5,5h7.5c2.485,0,4.5-2.015,4.5-4.5S19.985,14,17.5,14c-0.187,0-0.369,0.011-0.548,0.033C16.85,11.758,14.887,10,12.5,10c-1.391,0-2.639,0.597-3.513,1.554C8.016,10.638,6.868,10,5.5,10c-2.485,0-4.5,2.015-4.5,4.5s2.015,4.5,4.5,4.5h1" />
+             </svg>
+           </div>
+        )}
+
+        {/* The Icon itself (transparent, no bg) */}
+        <IconComponent 
+          size={isSelected ? 32 : 28} 
+          className={cn(
+            "relative z-10 transition-all duration-300 drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]",
+            iconColor
+          )} 
+          strokeWidth={isIllustration ? 1.5 : 2.5} 
+        />
+        
+        {/* Employee Avatar Badge */}
+        {avatarUrl && (
+          <div className="absolute -top-2 -right-2 w-7 h-7 rounded-lg border-2 border-white shadow-xl overflow-hidden transform rotate-6 z-20">
+            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        {/* Status Badge */}
+        {StatusIcon && (
+          <div className={cn(
+            "absolute -bottom-2 -left-2 w-7 h-7 text-white rounded-full border-2 border-white shadow-xl flex items-center justify-center z-20",
+            statusColor
+          )}>
+            <StatusIcon size={16} strokeWidth={3} />
+          </div>
+        )}
+
+        {/* Selection Ring (Simplified) */}
+        {isSelected && (
+          <div className="absolute inset-0 rounded-full border-2 border-blue-500 animate-pulse scale-125" />
+        )}
       </div>
-      <div className="mt-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded shadow-lg border border-white/10 text-center whitespace-nowrap z-50 pointer-events-none">
-         <span className="block text-[10px] font-black text-amber-400 uppercase tracking-wider">{label}</span>
+      
+      {/* Label (Always visible, clean) */}
+      <div className="mt-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full shadow-xl border border-white/10 text-center whitespace-nowrap z-50 pointer-events-none transition-all">
+         <span className="block text-[8px] font-black text-white uppercase tracking-[0.2em]">{label}</span>
       </div>
     </div>
   );
@@ -123,6 +184,7 @@ interface CFTVMappingProps {
 }
 
 export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
+  const { users, tasks, refreshData } = useData();
   const [points, setPoints] = useState<CFTVPoint[]>(project.cftvData?.points || []);
   const [links, setLinks] = useState<CFTVLink[]>(project.cftvData?.links || []);
   
@@ -130,6 +192,40 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
   const [prices, setPrices] = useState<Record<string, number>>(project.cftvData?.prices || {});
   const [extraItems, setExtraItems] = useState<ExtraItem[]>(project.cftvData?.extraItems || []);
   const [rightTab, setRightTab] = useState<'bim' | 'budget'>('bim');
+
+  const handleAssignUser = async (pointId: string, userId: string) => {
+    const point = points.find(p => p.id === pointId);
+    if (!point) return;
+
+    if (userId) {
+      try {
+        const user = users.find(u => u.id === userId);
+        const newTask = await dataService.createTask({
+          projectId: project.id,
+          title: `Instalar: ${point.label}`,
+          description: `Realizar instalação física e configuração lógica do ativo ${point.label} (${point.type}).\n\n📍 Localização Geográfica: ${point.y.toFixed(6)}, ${point.x.toFixed(6)}\n🔗 Google Maps: https://www.google.com/maps/search/?api=1&query=${point.y},${point.x}`,
+          status: 'Pendente',
+          priority: 'Alta',
+          assignees: user ? [user] : [],
+          dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0] // 2 dias de prazo
+        });
+
+        if (newTask && newTask.id) {
+          const newPoints = points.map(p => p.id === pointId ? { ...p, assignedUserId: userId, taskId: newTask.id } : p);
+          setPoints(newPoints);
+          // Forçar atualização imediata para garantir persistência do taskId
+          onUpdate({ points: newPoints, links, prices, extraItems });
+          await refreshData(); 
+        }
+      } catch (err) {
+        console.error("Erro ao gerar tarefa automática:", err);
+      }
+    } else {
+      const newPoints = points.map(p => p.id === pointId ? { ...p, assignedUserId: undefined, taskId: undefined } : p);
+      setPoints(newPoints);
+      onUpdate({ points: newPoints, links, prices, extraItems });
+    }
+  };
 
   const [mode, setMode] = useState<'move' | 'cable'>('move');
   const [selectedCableType, setSelectedCableType] = useState<'utp' | 'fiber' | 'power'>('utp');
@@ -143,6 +239,7 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
   
   const [addressSearch, setAddressSearch] = useState('');
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const initialCenter: [number, number] = useMemo(() => 
     points.length > 0 ? [points[0].y, points[0].x] : [-23.5505, -46.6333],
@@ -255,12 +352,41 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
-  const deleteSelected = useCallback(() => {
+  const deleteSelected = useCallback(async () => {
     if (!selectedPointId) return;
+    
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+
+    const point = points.find(p => p.id === selectedPointId);
+    if (point?.taskId) {
+      try {
+        await dataService.deleteTask(point.taskId);
+      } catch (err) {
+        console.error("Erro ao deletar tarefa vinculada:", err);
+      }
+    }
     setPoints(prev => prev.filter(p => p.id !== selectedPointId));
     setLinks(prev => prev.filter(l => l.fromId !== selectedPointId && l.toId !== selectedPointId));
     setSelectedPointId(null);
-  }, [selectedPointId]);
+    setConfirmingDelete(false);
+    await refreshData();
+  }, [selectedPointId, points, refreshData, confirmingDelete]);
+
+  const updateLinkedTask = useCallback(async (point: CFTVPoint) => {
+    if (!point.taskId) return;
+    try {
+      await dataService.updateTask(point.taskId, {
+        title: `Instalar: ${point.label}`,
+        description: `Realizar instalação física e configuração lógica do ativo ${point.label} (${point.type}).\n\n📍 Localização Geográfica: ${point.y.toFixed(6)}, ${point.x.toFixed(6)}\n🔗 Google Maps: https://www.google.com/maps/search/?api=1&query=${point.y},${point.x}`
+      });
+      await refreshData();
+    } catch (err) {
+      console.error("Erro ao atualizar tarefa vinculada:", err);
+    }
+  }, [refreshData]);
 
   const handleMarkerClick = useCallback((pointId: string) => {
     if (mode === 'cable') {
@@ -448,7 +574,7 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
             </p>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-8 pb-10 custom-scrollbar">
-            {['Câmeras', 'Rede', 'Infra'].map(group => (
+            {['Câmeras', 'Rede', 'Infra', 'Operações'].map(group => (
               <div key={group}>
                 <h4 className="text-[10px] font-black uppercase text-black/30 dark:text-white/30 mb-3 pl-1">{group}</h4>
                 <div className="space-y-2">
@@ -464,10 +590,21 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
                     >
                       {/* 3D Mini Icon in Library */}
                       <div className={cn(
-                         "w-10 h-10 rounded-[10px] flex items-center justify-center border border-white/40 shadow-[2px_2px_6px_rgba(0,0,0,0.1),-2px_-2px_6px_rgba(255,255,255,0.8),inset_1px_1px_3px_rgba(255,255,255,0.6)] group-hover/item:scale-110 transition-transform",
-                         eq.color
+                         "w-10 h-10 flex items-center justify-center group-hover/item:scale-110 transition-transform relative",
+                         eq.isIllustration && "animate-[cloud-swim_6s_infinite_ease-in-out]"
                       )}>
-                        <eq.icon size={18} strokeWidth={2.5} className="drop-shadow-sm" />
+                        {eq.isIllustration && (
+                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                             <svg viewBox="0 0 24 24" className="w-[140%] h-[140%] text-neutral-200 dark:text-white/5 opacity-80" fill="currentColor">
+                                <path d="M17.5,19c-3.037,0-5.5-2.463-5.5-5.5c0-0.101,0.003-0.2,0.009-0.299C11.332,13.111,10.686,13,10,13c-2.761,0-5,2.239-5,5s2.239,5,5,5h7.5c2.485,0,4.5-2.015,4.5-4.5S19.985,14,17.5,14c-0.187,0-0.369,0.011-0.548,0.033C16.85,11.758,14.887,10,12.5,10c-1.391,0-2.639,0.597-3.513,1.554C8.016,10.638,6.868,10,5.5,10c-2.485,0-4.5,2.015-4.5,4.5s2.015,4.5,4.5,4.5h1" />
+                             </svg>
+                           </div>
+                        )}
+                        <eq.icon 
+                          size={18} 
+                          strokeWidth={eq.isIllustration ? 1.5 : 2.5} 
+                          className={cn("drop-shadow-sm relative z-10", eq.color)} 
+                        />
                       </div>
                       <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-200">{eq.label}</span>
                     </div>
@@ -500,9 +637,17 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
 
           <MapContainer center={initialCenter} zoom={18} maxZoom={22} style={{ width: '100%', height: '100%' }} zoomControl={false}>
             {mapType === 'satellite' ? (
-              <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={22} />
+              <TileLayer 
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" 
+                maxZoom={22} 
+                maxNativeZoom={19}
+              />
             ) : (
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" maxZoom={20} />
+              <TileLayer 
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" 
+                maxZoom={22} 
+                maxNativeZoom={20}
+              />
             )}
             
             <MapInstanceExporter setMapInstance={setMapInstance} />
@@ -572,19 +717,33 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
             })}
 
             {/* Marcadores 3D Soft usando cache HTML */}
-            {points.map(point => (
-               <Marker 
-                 key={point.id} position={[point.y, point.x]} icon={getCustomIcon(point.type, point.label, selectedPointId === point.id)} draggable={mode === 'move'}
-                 eventHandlers={{
-                    click: () => handleMarkerClick(point.id),
-                    dragstart: () => { if (mode !== 'cable') setSelectedPointId(point.id); setRightTab('bim'); },
-                    dragend: (e) => {
-                       const pos = e.target.getLatLng();
-                       setPoints(prev => prev.map(p => p.id === point.id ? { ...p, x: pos.lng, y: pos.lat } : p));
-                    }
-                 }}
-               />
-            ))}
+            {points.map(point => {
+               const assignedUser = users.find(u => u.id === point.assignedUserId);
+               const associatedTask = tasks.find(t => t.id === point.taskId);
+               const isCompleted = associatedTask?.status === 'Concluído' || associatedTask?.status === 'Resolvido';
+
+               return (
+                <Marker 
+                  key={point.id} 
+                  position={[point.y, point.x]} 
+                  icon={getCustomIcon(point.type, point.label, selectedPointId === point.id, assignedUser?.avatar, associatedTask?.status)} 
+                  draggable={mode === 'move'}
+                  eventHandlers={{
+                     click: () => handleMarkerClick(point.id),
+                     dragstart: () => { if (mode !== 'cable') setSelectedPointId(point.id); setRightTab('bim'); },
+                     dragend: (e) => {
+                        const pos = (e.target as any).getLatLng();
+                        setPoints(prev => {
+                          const newPoints = prev.map(p => p.id === point.id ? { ...p, x: pos.lng, y: pos.lat } : p);
+                          const updatedPoint = newPoints.find(p => p.id === point.id);
+                          if (updatedPoint) updateLinkedTask(updatedPoint);
+                          return newPoints;
+                        });
+                     }
+                  }}
+                />
+               );
+            })}
           </MapContainer>
         </div>
 
@@ -610,8 +769,17 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
               <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
                 <div className="flex items-center justify-between pb-3 border-b border-black/5 dark:border-white/5">
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/50">Configurar Ativo</h4>
-                  <button onClick={deleteSelected} title="Excluir" className="text-red-500 hover:bg-red-500 hover:text-white dark:hover:bg-red-500/20 p-2 rounded-lg transition-colors">
-                    <Trash2 size={14} />
+                  <button 
+                    onClick={deleteSelected} 
+                    title={confirmingDelete ? "Clique novamente para confirmar" : "Excluir"} 
+                    className={cn(
+                      "p-2 rounded-lg transition-all flex items-center gap-1 text-[10px] uppercase font-black tracking-widest",
+                      confirmingDelete 
+                        ? "bg-red-600 text-white shadow-lg animate-pulse" 
+                        : "text-red-500 hover:bg-red-500 hover:text-white dark:hover:bg-red-500/20"
+                    )}
+                  >
+                    {confirmingDelete ? "Confirmar?" : <Trash2 size={14} />}
                   </button>
                 </div>
                 
@@ -622,9 +790,30 @@ export default function CFTVMapping({ project, onUpdate }: CFTVMappingProps) {
                       <input 
                         type="text" 
                         value={p.label} 
-                        onChange={(e) => setPoints(prev => prev.map(pt => pt.id === p.id ? {...pt, label: e.target.value} : pt))}
+                        onChange={(e) => {
+                          const newPoints = prev => prev.map(pt => pt.id === p.id ? {...pt, label: e.target.value} : pt);
+                          setPoints(newPoints);
+                        }}
+                        onBlur={() => {
+                          const currentPoint = points.find(pt => pt.id === p.id);
+                          if (currentPoint) updateLinkedTask(currentPoint);
+                        }}
                         className="w-full bg-neutral-100 dark:bg-black/50 border border-transparent focus:border-blue-500 rounded-xl p-3 text-xs text-black dark:text-white font-bold outline-none transition-all shadow-inner"
                       />
+                    </div>
+
+                    <div className="space-y-1.5 focus-within:text-blue-600 transition-colors">
+                      <label className="text-[10px] uppercase font-black opacity-60">Responsável / Funcionário</label>
+                      <select 
+                        value={p.assignedUserId || ''} 
+                        onChange={(e) => handleAssignUser(p.id, e.target.value)}
+                        className="w-full bg-neutral-100 dark:bg-black/50 border border-transparent focus:border-blue-500 rounded-xl p-3 text-xs text-black dark:text-white font-bold outline-none transition-all shadow-inner appearance-none"
+                      >
+                        <option value="">Nenhum designado</option>
+                        {users.map(u => (
+                          <option key={u.id} value={u.id}>{u.name}</option>
+                        ))}
+                      </select>
                     </div>
                     {p.type.includes('camera') && (
                       <div className="space-y-4 pt-2">
